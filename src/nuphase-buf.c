@@ -34,7 +34,7 @@ nuphase_buf_t* nuphase_buf_init(size_t max_capacity, size_t memb_size)
   }
 
 
-  b->mem = malloc(sizeof(memb_size) * max_capacity); 
+  b->mem = calloc(memb_size, max_capacity); 
   if (!b->mem)
   {
     fprintf(stderr,"Can't allocate buffer memory. Are we out of memory!?"); 
@@ -47,6 +47,7 @@ nuphase_buf_t* nuphase_buf_init(size_t max_capacity, size_t memb_size)
   b->capacity = max_capacity; 
   b->memb_size = memb_size; 
   b->index = buffer_count++; 
+
   
   return b; 
 }
