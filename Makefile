@@ -1,6 +1,8 @@
-CFLAGS +=-g -Iinclude -Wall -I../libnuphase
-LDFLAGS+=-L../libnuphase -lnuphase
 
+LIBNUPHASE_DIR=..
+PREFIX=/usr/local 
+CFLAGS +=-g -Iinclude -Wall -I$(LIBNUPHASE_DIR)/libnuphase
+LDFLAGS+=-L$(LIBNUPHASE_DIR)/libnuphase -lnuphase -lz 
 
 CC=gcc 
 BUILDDIR=build
@@ -15,13 +17,11 @@ INCLUDES := $(addprefix $(INCLUDEDIR)/, $(shell ls $(INCLUDEDIR)))
 
 all: $(PROGRAMS) 
 
-
 $(BUILDDIR): 
 	mkdir -p $(BUILDDIR)
 
 $(BINDIR): 
 	mkdir -p $(BINDIR)
-
 
 $(BUILDDIR)/%.o: src/%.c $(INCLUDES) Makefile | $(BUILDDIR)
 	@echo Compiling  $< 
