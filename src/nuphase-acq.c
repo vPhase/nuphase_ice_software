@@ -127,6 +127,7 @@ static pthread_t wri_thread;
 /* used for exiting */ 
 static volatile int die; 
 
+static nuphase_config_t device_cfg[NUM_NUPHASE_DEVICES]; 
 
 /************** Prototypes *********************
  Brief documentation follows. More detailed documentation
@@ -134,12 +135,23 @@ static volatile int die;
  */
 
 
+static int run_number; 
 
+// this sets everything up (opens device, starts threads, signal handlers, etc. ) 
 static int setup(); 
+// this cleans up 
 static int teardown(); 
-static int readConfig(); 
-static void fatal(); // call this when we need to stop
 
+//this reads in the config
+static int read_config(int first_time); 
+
+// this will do stuff like the pid loop and stuff some day
+static int react_to_status(int board, const nuphase_status_t * status);  
+
+// call this when we need to stop
+static void fatal(); 
+
+static void signal_handler(int, siginfo_t *, void *); 
 
 /* Acquisition thread */ 
 static void * acq_thread(void * p);
@@ -159,6 +171,7 @@ int main(int nargs, char ** args)
   {
     return 1; 
   }
+
 
   while(!die) 
   {
@@ -199,6 +212,9 @@ void * acq_thread(void *v)
 }
 
 
+
+
+
 /** Monitor thread
  *
  * This will periodically grab the status and put it into its buffer
@@ -208,20 +224,22 @@ void * monitor_thread(void *v)
 {
   monitor_thread_param_t * p = (monitor_thread_param_t*) v; 
   unsigned sleep_amt =  1e6 * 1./p->hz; 
+  nuphase_status_t status; 
   int i;
+
 
   while(!die) 
   {
-    monitor_buffer_t * mem = (monitor_buffer_t*) nuphase_buf_getmem(p->b); 
     for (i = 0; i < NUM_NUPHASE_DEVICES; i++)
     {
       if (p->d[i]) 
       {
-        nuphase_read_status(p->d[i], &mem->status[i]); 
-        //TODO: adjust pid goal 
+        nuphase_read_status(p->d[i], &status); 
+        react_to_status(i,&status)
       }
     }
-    nuphase_buf_commit(p->b);
+
+    nuphase_buf_push(p->b, &status);
     usleep(sleep_amt); 
   }
 
@@ -229,9 +247,7 @@ void * monitor_thread(void *v)
 }
 
 
-
-
-/* makes a directory if it's noth already there. 
+/* makes a directory if it's not already there. 
  * If 0 is returned, then you can probably trust that it's there */ 
 static int mkdir_if_needed(const char * path)
 {
@@ -439,10 +455,86 @@ void * write_thread(void *v)
 void fatal()
 {
   die = 1; 
+
+  //loop through and cancel any waits 
+  int i; 
+  for (i = 0; i < NUM_NUPHASE_DEVICES; i++)
+  {
+    if (devices[i])
+    {
+      nuphase_cancel_wait(devices[i]); 
+    }
+  }
+
+}
+
+void signal_handler(int signal, siginfo_t * sig, void * v) 
+{
+  switch (signal)
+  {
+    case SIGUSR1: 
+      read_config(0); 
+      break; 
+    case SIGTERM: 
+    case SIGUSR2: 
+    case SIGINT: 
+    default: 
+      fprintf(stderr,"Caught deadly signal %d\n", signal); 
+      fatal(); 
+  }
 }
 
 int setup()
 {
+  //let's do signal handlers. 
+  //My understanding is that the main thread gets all the signals it doesn't block first, so we'll just handle it that way. 
+
+  sigset_t empty;
+  sigemptyset(&empty); 
+  struct sigaction sa; 
+  sa.sa_mask = sset; 
+  sa.sa_flags = 0; 
+  sa.sa_handler = signal_handler; 
+
+  sigaction(SIGINT,  &sa,0); 
+  sigaction(SIGTERM, &sa,0); 
+  sigaction(SIGUSR1, &sa,0); 
+  sigaction(SIGUSR2, &sa,0); 
+
+
+
+  //now let's read the config , for the first time
+  readConfig(1); 
+
+  /* open up the run number file */ 
+
+
+
+  //open the devices, intialize the buffers, and start the threads
+  int idev; 
+  for (idev = 0; idev < NUM_NUPHASE_DEVICES; idev++)
+  {
+    if (config.spi_devices[idev])
+    {
+      nuphase_config_t device_config; 
+      nuphase_config_init(&device_config); 
+
+      devices[idev] = nuphase_open(config.spi_devices[idev], config.gpio_devices[idev], &device_config, 1); 
+
+      if (!devices[idev])
+      {
+        //oh boy, this is NOT good! 
+        fprintf(stderr,"Couldn't open %s. That device will be unavailable. \n", config.spi_devices[idev]); 
+        continue; 
+      }
+
+
+      //set the readout number to run << 32. 
+
+    }
+  }
+
+
 
   return 0;
 
@@ -453,7 +545,8 @@ int teardown()
   return 0;
 }
 
-int readConfig()
+
+int readConfig(int first_time)
 {
 
 
