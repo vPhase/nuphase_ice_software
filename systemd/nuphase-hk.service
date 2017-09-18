@@ -1,0 +1,9 @@
+[Unit]
+Description=Provide HouseKeeping Information
+Wants=nuphase-copy.service 
+
+[Service] 
+EnvironmentFile=/etc/nuphase.cfg 
+Restart=always 
+ExecStart=$NUPHASE_PATH/nuphase-hk 
+ExecReload=/bin/kill -USR1 $MAINPID

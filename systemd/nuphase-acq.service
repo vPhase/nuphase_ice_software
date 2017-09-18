@@ -1,0 +1,8 @@
+[Unit]
+Description=Record NuPhase data
+Wants=nuphase-copy.service
+
+[Service] 
+EnvironmentFile=/etc/nuphase.cfg
+Restart=always 
+ExecStart=$NUPHASE_PATH/nuphase-acq 
