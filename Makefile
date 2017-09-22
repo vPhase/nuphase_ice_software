@@ -18,7 +18,7 @@ NUPHASE_CONFIG_DIR=${PREFIX}/cfg
 
 
 CFLAGS +=-g -Iinclude -Wall -I$(LIBNUPHASE_DIR)/libnuphase -D_GNU_SOURCE
-LDFLAGS+=-L$(LIBNUPHASE_DIR)/libnuphase -lnuphase -lnuphasedaq  -lz -lpthread -lconfig
+LDFLAGS+=-L$(LIBNUPHASE_DIR)/libnuphase -lnuphase -lnuphasedaq  -lz -lpthread -lconfig -lrt
 
 CC=gcc 
 BUILDDIR=build
