@@ -7,7 +7,8 @@
  * Cosmin Deaconu <cozzyd@kicp.uchicago.edu> 
  *
  * Supports one producer and one consumer. Implementation uses memory barriers, although 
- * they're probably not strictly necessary on a single-cpu ARM. 
+ * they're probably not strictly necessary on a single-cpu ARM (or maybe they are since ARM has a 
+ * different memory model than x86) 
  *
  **/
 
