@@ -1,16 +1,18 @@
 This is the software that runs the NuPhase station. 
 It depends on libnuphase for talking to the boards. 
 
-It consists of several programs intended to run as daemons: 
+It consists of several programs: 
 
 nuphase-acq:   Data Acquisition (nuphase-acq.c)
-nuphase-copy:  Data copying     (nuphase-copy.c) 
-nuphase-hk:    Housekeeping     (nuphase-hk.c) 
+nuphase-copy:  Data copying to RadProc    (nuphase-copy.c)
+nuphase-hk:   Housekeeping  / power control daemon     (nuphase-hk.c)
+nuphase-startup: Startup process that waits for the right temperature ( nuphase-startup.c) 
 
 
 
 Influential environmental variables: 
 
   NUPHASE_CONFIG_DIR : defines the directory to read config files from 
+  
 
 
