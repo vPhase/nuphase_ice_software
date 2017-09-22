@@ -39,7 +39,7 @@ int mkdir_if_needed(const char * path)
   struct stat st; 
   if ( stat(path,&st) || ( (st.st_mode & S_IFMT) != S_IFDIR))//not there, try to make it
   {
-     return mkdir(path,0666);
+     return mkdir(path,0755);
   }
 
   return 0; 
