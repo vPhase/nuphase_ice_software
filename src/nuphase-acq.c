@@ -11,17 +11,17 @@
  * Right now the threads are: 
  *
  *  - The main thread: reads the config, sets up, tears down, and waits for
- *  signals
+ *  signals. 
  *
- * - A per-device acquisition thread, which will wait for a data ready
- *   interrupt and then take data.
+ * - Acquisition thread - takes the data and reads it
  * 
- * - A monitoring thread, reads in statuses and does the pid loops
+ * - A monitoring thread, reads in statuses, send software_triggers, and does the pid loops 
+ *   (not sure if this should be merged into the acquisition thread...) 
  *
  * - A write thread, which writes to disk and screen.
  *
- * The config is read on startup and reread on SIGUSR1  (although some things,
- * like the device names, require a restart of the process). 
+ * The config is read on startup. Right now, the configuration cannot be reloaded
+ * without a restart.
  *
  **/ 
 
@@ -38,44 +38,33 @@
 #include <sys/stat.h>
 #include <string.h>
 #include <unistd.h>
-
+#include <signal.h>
 
 
 /************** Structs /Typedefs ******************************/
 
-/* Acquisition thread paramters*/ 
-typedef struct acq_thread_param
+
+/** PID state */ 
+typedef struct pid_state
 {
-  nuphase_dev_t * d; 
-  nuphase_buf_t * b; 
-  int index; 
+  double k_p; 
+  double k_i; 
+  double k_d; 
+  int nsum; 
+  double sum_error[NP_NUM_BEAMS];
+  double last_measured[NP_NUM_BEAMS];
+} pid_state_t; 
 
-} acq_thread_param_t;
-
-/*Monitor thread parameters */ 
-typedef struct monitor_thread_param
+static void pid_state_init (pid_state_t * c, double p, double i, double d)
 {
-  nuphase_dev_t * d[NUM_NUPHASE_DEVICES];  //device handles. 0 if not used. 
-  nuphase_buf_t * b; 
-  float hz; // attempted monitoring frequency 
-} monitor_thread_param_t; 
+  c->k_p = p; 
+  c->k_i = i; 
+  c->k_d = d; 
 
-typedef struct write_thread_param 
-{
-  int new_dir_time;                              //if more than this many seconds has elapsed, 
-                                                 //start a new directory for the next file
-  int events_per_file;                           //number of events to store per file. 
-  int status_per_file;                           //number of status's to store per file
-  const char * data_dir;                         //the output directory
-  nuphase_buf_t * monitor_buf;                   //buffer for the monitor
-  nuphase_buf_t * acq_buf[NUM_NUPHASE_DEVICES];  //buffer for the acquisitions.  
-  int write_board_to_disk[NUM_NUPHASE_DEVICES];  //the devices for which we should write to disk
-  int board_id [NUM_NUPHASE_DEVICES];            //board ids
-  int write_interval;                            // will write out some stats to screen every write_interval (if greater than 0)
-
-}write_thread_param_t;
-
-
+  c->nsum =0;
+  memset(c->sum_error,0, sizeof(c->sum_error)); 
+  memset(c->last_measured,0, sizeof(c->last_measured)); 
+}
 
 /* This is what is stored within the acquisition buffer 
  *
@@ -95,7 +84,9 @@ typedef struct acq_buffer
 /* this is what is stored within the monitor buffer */ 
 typedef struct monitor_buffer
 {
-  nuphase_status_t status[NUM_NUPHASE_DEVICES]; 
+  nuphase_status_t status; //status before
+  uint32_t thresholds[NP_NUM_BEAMS]; //thresholds when written 
+  pid_state_t control; //the pid state 
 } monitor_buffer_t; 
 
 /**************Static vars *******************************/
@@ -106,28 +97,29 @@ static nuphase_acq_cfg_t config;
 /* Mutex protecting the configuration */
 static pthread_mutex_t config_lock; 
 
-/* The devices */
-static nuphase_dev_t* devices[NUM_NUPHASE_DEVICES]; 
+/* The device */
+static nuphase_dev_t* device;
 
 /* Acquisition thread handles */ 
-static pthread_t acq_threads[NUM_NUPHASE_DEVICES] ; 
+static pthread_t the_acq_thread; 
 
-/*Buffers for acq thread */ 
-static nuphase_buf_t* event_buffers[NUM_NUPHASE_DEVICES];  
+/*Buffer for acq thread */ 
+static nuphase_buf_t* acq_buffer = 0; 
 
-/*Buffers for monitor thread */ 
-static nuphase_buf_t* monitor_buffers[NUM_NUPHASE_DEVICES];  
+/*Buffer for monitor thread */ 
+static nuphase_buf_t* mon_buffer = 0; 
 
 /* Monitor thread handle */ 
-static pthread_t mon_thread; 
+static pthread_t the_mon_thread; 
 
 /* Write thread handle */ 
-static pthread_t wri_thread; 
+static pthread_t the_wri_thread; 
+
+static pid_state_t control; 
 
 /* used for exiting */ 
 static volatile int die; 
 
-static nuphase_config_t device_cfg[NUM_NUPHASE_DEVICES]; 
 
 /************** Prototypes *********************
  Brief documentation follows. More detailed documentation
@@ -145,8 +137,6 @@ static int teardown();
 //this reads in the config
 static int read_config(int first_time); 
 
-// this will do stuff like the pid loop and stuff some day
-static int react_to_status(int board, const nuphase_status_t * status);  
 
 // call this when we need to stop
 static void fatal(); 
@@ -163,7 +153,6 @@ static void * monitor_thread(void * p);
 static void * write_thread(void * p ); 
 
 
-
 /* The main function... not too much here */ 
 int main(int nargs, char ** args) 
 {
@@ -172,17 +161,14 @@ int main(int nargs, char ** args)
     return 1; 
   }
 
-
   while(!die) 
   {
-    usleep(1000);  //1 ms 
+    usleep(100000);  //100 ms 
     sched_yield();
   }
 
   return teardown(); 
 }
-
-
 
 
 
@@ -193,19 +179,19 @@ int main(int nargs, char ** args)
  ***/ 
 void * acq_thread(void *v) 
 {
-  acq_thread_param_t * p = (acq_thread_param_t*) v; 
+
 
   while(!die) 
   {
-    /* grab a buffer to fill */ 
-    acq_buffer_t * mem = (acq_buffer_t*) nuphase_buf_getmem(p->b); 
+   /* grab a buffer to fill */ 
+    acq_buffer_t * mem = (acq_buffer_t*) nuphase_buf_getmem(acq_buffer); 
     mem->nfilled = 0; //nothing filled
 
     while (!mem->nfilled) 
     {
-      mem->nfilled = nuphase_wait_for_and_read_multiple_events(p->d, &mem->headers, &mem->events); 
+      mem->nfilled = nuphase_wait_for_and_read_multiple_events(device, &mem->headers, &mem->events); 
     }
-    nuphase_buf_commit(p->b); // we filled it 
+    nuphase_buf_commit(acq_buffer); // we filled it 
   }
 
   return 0; 
@@ -215,52 +201,130 @@ void * acq_thread(void *v)
 
 
 
-/** Monitor thread
+/***********************************************************************
+ * Monitor thread
  *
- * This will periodically grab the status and put it into its buffer
+ * This will periodically grab the status / adjust thresholds / send software triggers
  *
- **/
+ *  The PID loops lies within here. 
+ ***************************************************************************************/
 void * monitor_thread(void *v) 
 {
-  monitor_thread_param_t * p = (monitor_thread_param_t*) v; 
-  unsigned sleep_amt =  1e6 * 1./p->hz; 
-  nuphase_status_t status; 
-  int i;
 
+  struct timespec start; 
+  clock_gettime(CLOCK_MONOTONIC, &start); 
+
+  struct timespec last_sw_trig = { .tv_sec = 0, .tv_nsec = 0};
+  struct timespec last_mon = { .tv_sec = 0, .tv_nsec = 0};
+  int phased_trigger_status = -1; 
 
   while(!die) 
   {
-    for (i = 0; i < NUM_NUPHASE_DEVICES; i++)
+    //figure out the current time
+    struct timespec now; 
+    clock_gettime(CLOCK_MONOTONIC, &now); 
+
+    /////////////////////////////////////////////////////
+    //turn on and off phased trigger as necessary
+    /////////////////////////////////////////////////////
+    if (config.enable_phased_trigger && phased_trigger_status != 1)
     {
-      if (p->d[i]) 
+      if (config.secs_before_phased_trigger)
       {
-        nuphase_read_status(p->d[i], &status); 
-        react_to_status(i,&status)
+        struct timespec now; 
+        clock_gettime(CLOCK_MONOTONIC, &now); 
+        if (timespec_difference_float(&now,&start) > config.secs_before_phased_trigger)
+        {
+          nuphase_phased_trigger_readout(device, 1); 
+          phased_trigger_status = 1; 
+        }
+      }
+      else
+      {
+          nuphase_phased_trigger_readout(device, 1); 
+          phased_trigger_status = 1; 
       }
     }
+    else if (!config.enable_phased_trigger && phased_trigger_status == 1)
+    {
+      nuphase_phased_trigger_readout(device, 0); 
+      phased_trigger_status = 0; 
+    }
 
-    nuphase_buf_push(p->b, &status);
-    usleep(sleep_amt); 
+ 
+    float diff_mon = timespec_difference_float(&now, &last_mon); 
+    float diff_swtrig = timespec_difference_float(&now, &last_sw_trig); 
+
+    //////////////////////////////////////////////////////
+    //read the status, and react to it 
+    //////////////////////////////////////////////////////
+    if (config.monitor_interval &&  diff_mon > config.monitor_interval)
+    {
+      monitor_buffer_t mb; 
+      nuphase_status_t *st = &mb.status;
+      nuphase_read_status(device, st, MASTER); 
+      int ibeam; 
+
+      for (ibeam = 0; ibeam < NP_NUM_BEAMS; ibeam++)
+      {
+
+       
+        ///// REVISIT THIS 
+        ///// We need to figure out how to use both the fast and slow scalers
+        ///// For now, take a weighted average of the fast and slow scalers to determine the rate. 
+        double measured_slow = ((double) st->beam_scalers[SCALER_SLOW][ibeam]) / NP_SCALER_TIME(SCALER_SLOW); 
+        double measured_fast = ((double) st->beam_scalers[SCALER_FAST][ibeam]) / NP_SCALER_TIME(SCALER_FAST); 
+        double measured =  (config.slow_scaler_weight * measured_slow + config.fast_scaler_weight * measured_fast) / (config.slow_scaler_weight + config.fast_scaler_weight); 
+        double e =  config.scaler_goal[ibeam] - measured;
+        double de = 0;
+
+        // only compute difference after first iteration
+        if (control.nsum > 0) 
+        {
+          de = (measured - control.last_measured[ibeam]) / diff_mon; 
+        }
+
+        control.sum_error[ibeam] += e; 
+        control.nsum++; 
+        double ie = control.sum_error[ibeam] / control.nsum; 
+
+        control.last_measured[ibeam] = measured; 
+
+        // modify threshold 
+        mb.thresholds[ibeam] =  control.k_p * e + control.k_i * ie * control.k_d * de; 
+      }
+
+      //apply the thresholds 
+      nuphase_set_thresholds(device, mb.thresholds,0); 
+      
+      //copy over the current control status 
+      memcpy(&mb.control, &control, sizeof(control)); 
+
+      nuphase_buf_push(mon_buffer, &mb);
+      memcpy(&last_mon,&now, sizeof(now)); 
+      diff_mon = 0; 
+    }
+
+    if (config.sw_trigger_interval && diff_swtrig > config.sw_trigger_interval)
+    {
+      nuphase_sw_trigger(device); 
+      memcpy(&last_sw_trig,&now, sizeof(now)); 
+      diff_swtrig = 0;
+    }
+
+    //now figure out how long to sleep 
+    //
+    float how_long_to_sleep = 0.1; //don't sleep longer than 100 ms 
+
+    if (config.monitor_interval && config.monitor_interval - diff_mon  < how_long_to_sleep) how_long_to_sleep = config.monitor_interval - diff_mon; 
+    if (config.sw_trigger_interval && config.sw_trigger_interval - diff_swtrig  < how_long_to_sleep) how_long_to_sleep = config.sw_trigger_interval - diff_swtrig; 
+
+    usleep(how_long_to_sleep * 1e6); 
   }
 
   return 0; 
 }
 
-
-/* makes a directory if it's not already there. 
- * If 0 is returned, then you can probably trust that it's there */ 
-static int mkdir_if_needed(const char * path)
-{
-
-  struct stat st; 
-  if ( stat(path,&st) || ( (st.st_mode & S_IFMT) != S_IFDIR))//not there, try to make it
-  {
-     return mkdir(path,0666);
-  }
-
-  return 0; 
-
-}
 
 const char * subdirs[] = {"event","header","status"}; 
 const int nsubdirs = sizeof(subdirs) / sizeof(*subdirs); 
@@ -309,65 +373,49 @@ void * write_thread(void *v)
   time_t start_time = time(0);
   time_t current_dir_time = 0; 
   time_t last_print_out =start_time ; 
-  int i; 
 
-  write_thread_param_t * p = (write_thread_param_t*) v; 
+  char bigbuf[strlen(config.output_directory)+512];
 
-  char bigbuf[strlen(p->data_dir)+512];
+  int    data_file_size = 0;
+  int    header_file_size = 0;
+  int    status_file_size =0;
 
-  int    data_file_size[NUM_NUPHASE_DEVICES] = {0} ; 
-  int    header_file_size[NUM_NUPHASE_DEVICES] = {0} ; 
-  int    status_file_size[NUM_NUPHASE_DEVICES] = {0} ; 
+  gzFile data_file = 0 ; 
+  gzFile header_file = 0 ; 
+  gzFile status_file  = 0 ; 
 
-  gzFile data_files[NUM_NUPHASE_DEVICES] = {0} ; 
-  gzFile header_files[NUM_NUPHASE_DEVICES] = {0} ; 
-  gzFile status_files[NUM_NUPHASE_DEVICES]  = {0} ; 
+  acq_buffer_t *events= 0; 
+  monitor_buffer_t *mon= 0;
 
-  acq_buffer_t *event_buffers[NUM_NUPHASE_DEVICES] = {0};
-  monitor_buffer_t *mon_buffer = 0;
-
-  int num_output_devices = 0; 
-  for (i = 0; i < NUM_NUPHASE_DEVICES; i++)
-  {
-    num_output_devices += p->write_board_to_disk[i]; 
-  }
-
-  int num_events[NUM_NUPHASE_DEVICES] = {0}; 
+  
+  int num_events = 0; 
  
 
-  while(true) 
+  while(1) 
   {
     time_t now = time(0); 
     int have_data= 0; 
     int have_status = 0;
     
-    for (i = 0; i < NUM_NUPHASE_DEVICES; i++)
+    if (nuphase_buf_occupancy(acq_buffer))
     {
-      if (p->acq_buf[i])
-      {
-        if (!nuphase_buf_occupancy(p->acq_buf[i])) continue; //nothign to see here
-        event_buffers[i] = nuphase_buf_pop(p->acq_buf[i], event_buffers[i]); 
-        num_events[i]  += event_buffers[i]->nfilled; 
+        events = nuphase_buf_pop(acq_buffer, events); 
+        num_events += events->nfilled; 
         have_data=1;
-      }
     }
 
-    if (nuphase_buf_occupancy(p->monitor_buf)) 
+    if (nuphase_buf_occupancy(mon_buffer)) 
     {
-      mon_buffer = nuphase_buf_pop(p->monitor_buf, mon_buffer); 
+      mon = nuphase_buf_pop(mon_buffer, mon); 
       have_status=1; 
     }
     
     //print something to screen
-    if (p->write_interval > 0 && now - last_print_out > p->write_interval)  
+    if (config.print_interval > 0 && now - last_print_out > config.print_interval)  
     {
       printf("---------%s----------\n",asctime(gmtime(&now)));  
-      for (i = 0; i < NUM_NUPHASE_DEVICES; i++)
-      {
-        printf("BD %d approx_rate:  %g Hz\n", p->board_id[i], (num_events[i] == 0) ? 0. : num_events[i] / ((float) now - (float) last_print_out)); 
-        num_events[i] = 0;
-      }
-
+      printf("  approx_rate:  %g Hz\n", (num_events == 0) ? 0. : num_events / ((float) now - (float) last_print_out)); 
+      num_events = 0;
     }
 
 
@@ -380,71 +428,62 @@ void * write_thread(void *v)
       continue; 
     }
    
-    //if we are writing stuff out, it's time to do that now . 
-    if (num_output_devices)
+    //make sure we have the right dirs
+    if ( now - current_dir_time > config.run_length) 
     {
-      //make sure we have the right dirs
-      if ( now - current_dir_time > p->new_dir_time) 
+      if (make_dirs_for_time(config.output_directory, start_time))
       {
-        if (make_dirs_for_time(p->data_dir, start_time))
-        {
-          fatal(); 
-          break; 
-        }
-        current_dir_time = now; 
+        fatal(); 
+        break; 
       }
-     
-      for (i = 0; i < NUM_NUPHASE_DEVICES; i++)
+      current_dir_time = now; 
+    }
+   
+        
+    if (have_data)
+    {
+      int j; 
+
+      for (j = 0; j < events->nfilled; j++)
       {
-        if (p->write_board_to_disk[i]) 
+
+        if (!data_file || data_file_size > config.events_per_file)
         {
-          
-          if (have_data)
-          {
-            int j; 
-
-            for (j = 0; j < event_buffers[i]->nfilled; j++)
-            {
-
-              if (!data_files[i] || data_file_size[i] > p->events_per_file)
-              {
-                if (data_files[i]) gzclose(data_files[i]); 
-                snprintf(bigbuf,sizeof(bigbuf),"%s/event/%u/bd%d_%u.event.gz", p->data_dir, (unsigned) current_dir_time, p->board_id[i], (unsigned) now); 
-                data_files[i] = gzopen(bigbuf,"w");  //TODO add error check
-                data_file_size[i] = 0; 
-              }
-
-              if (!header_files[i] || header_file_size[i] > p->events_per_file)
-              {
-                if (header_files[i]) gzclose(header_files[i]); 
-                snprintf(bigbuf,sizeof(bigbuf),"%s/header/%u/bd%d_%u.header.gz", p->data_dir, (unsigned) current_dir_time, p->board_id[i],(unsigned)  now); 
-                header_files[i] = gzopen(bigbuf,"w");  //TODO add error check
-                header_file_size[i] = 0; 
-              }
-             
-              nuphase_event_gzwrite(data_files[i], &event_buffers[i]->events[j]); 
-              nuphase_header_gzwrite(header_files[i], &event_buffers[i]->headers[j]); 
-              data_file_size[i]++; 
-              header_file_size[i]++; 
-            }
-          }
-
-          if (have_status)
-          {
-            if (!status_files[i] || status_file_size[i] > p->status_per_file)
-            {
-              if (status_files[i]) gzclose(status_files[i]); 
-              snprintf(bigbuf,sizeof(bigbuf),"%s/status/%u/bd%d_%u.status.gz", p->data_dir, (unsigned) current_dir_time, p->board_id[i], (unsigned) now); 
-              status_files[i] = gzopen(bigbuf,"w");  //TODO add error check
-              status_file_size[i] = 0; 
-            }
-
-            nuphase_status_gzwrite(status_files[i], &mon_buffer->status[i]); 
-            status_file_size[i]++; 
-          }
+          if (data_file) gzclose(data_file); 
+          snprintf(bigbuf,sizeof(bigbuf),"%s/event/%u/%u.event.gz", config.output_directory, (unsigned) current_dir_time, (unsigned) now); 
+          data_file = gzopen(bigbuf,"w");  //TODO add error check
+          data_file_size = 0; 
         }
+
+        if (!header_file || header_file_size > config.events_per_file)
+        {
+          if (header_file) gzclose(header_file); 
+          snprintf(bigbuf,sizeof(bigbuf),"%s/header/%u/%u.header.gz", config.output_directory, (unsigned) current_dir_time,(unsigned)  now); 
+          header_file = gzopen(bigbuf,"w");  //TODO add error check
+          header_file_size = 0; 
+        }
+       
+        nuphase_event_gzwrite(data_file, &events->events[j]); 
+        nuphase_header_gzwrite(header_file, &events->headers[j]); 
+        data_file_size++; 
+        header_file_size++; 
       }
     }
+
+    if (have_status)
+    {
+      if (!status_file || status_file_size > config.status_per_file)
+      {
+        if (status_file) gzclose(status_file); 
+        snprintf(bigbuf,sizeof(bigbuf),"%s/status/%u/%u.status.gz", config.output_directory, (unsigned) current_dir_time, (unsigned) now); 
+        status_file = gzopen(bigbuf,"w");  //TODO add error check
+        status_file_size = 0; 
+      }
+
+      nuphase_status_gzwrite(status_file, &mon->status); 
+      status_file_size++; 
+    }
+    
   }
 
   return 0; 
@@ -456,15 +495,9 @@ void fatal()
 {
   die = 1; 
 
-  //loop through and cancel any waits 
-  int i; 
-  for (i = 0; i < NUM_NUPHASE_DEVICES; i++)
-  {
-    if (devices[i])
-    {
-      nuphase_cancel_wait(devices[i]); 
-    }
-  }
+  //cancel any waits 
+  if (device) 
+    nuphase_cancel_wait(device); 
 
 }
 
@@ -484,6 +517,8 @@ void signal_handler(int signal, siginfo_t * sig, void * v)
   }
 }
 
+const char * tmp_run_file = "/tmp/.runfile"; 
+
 int setup()
 {
   //let's do signal handlers. 
@@ -492,9 +527,9 @@ int setup()
   sigset_t empty;
   sigemptyset(&empty); 
   struct sigaction sa; 
-  sa.sa_mask = sset; 
+  sa.sa_mask = empty; 
   sa.sa_flags = 0; 
-  sa.sa_handler = signal_handler; 
+  sa.sa_sigaction = signal_handler; 
 
   sigaction(SIGINT,  &sa,0); 
   sigaction(SIGTERM, &sa,0); 
@@ -502,53 +537,91 @@ int setup()
   sigaction(SIGUSR2, &sa,0); 
 
 
+  //Read configuration 
+  read_config(1); 
 
-  //now let's read the config , for the first time
-  readConfig(1); 
+  /* open up the run number file, read the run, then increment it and save it
+   * This is a bit fragile, potentially, so maybe revisit. 
+   * */ 
+  FILE * run_file = fopen(config.run_file, "r"); 
+  fscanf(run_file, "%d\n", &run_number); 
+  fclose(run_file); 
 
-  /* open up the run number file */ 
+  run_file = fopen(tmp_run_file,"w"); 
+  fprintf(run_file,"%d\n", run_number+1); 
+  fclose(run_file); 
+  rename(tmp_run_file, config.run_file); 
 
 
+  //open the devices and configure properly
+  // the gpio state should already have been set 
+  device = nuphase_open(config.spi_devices[0], config.spi_devices[1], 0, 1); 
 
-  //open the devices, intialize the buffers, and start the threads
-  int idev; 
-  for (idev = 0; idev < NUM_NUPHASE_DEVICES; idev++)
+  if (!device)
   {
-    if (config.spi_devices[idev])
-    {
-      nuphase_config_t device_config; 
-      nuphase_config_init(&device_config); 
-
-      devices[idev] = nuphase_open(config.spi_devices[idev], config.gpio_devices[idev], &device_config, 1); 
-
-      if (!devices[idev])
-      {
-        //oh boy, this is NOT good! 
-        fprintf(stderr,"Couldn't open %s. That device will be unavailable. \n", config.spi_devices[idev]); 
-        continue; 
-      }
-
-
-      //set the readout number to run << 32. 
-
-    }
+    //that would not be really good 
+    fprintf(stderr,"Couldn't open device. Aborting! \n"); 
+    exit(1); 
   }
 
+  uint64_t run64 = run_number; 
+
+  nuphase_set_spi_clock(device, config.spi_clock); 
+  nuphase_set_buffer_length(device, config.waveform_length); 
+  nuphase_set_readout_number_offset(device, run64 * 1000000000); 
+
+  // set up the buffers
+  acq_buffer = nuphase_buf_init( config.buffer_capacity, sizeof(acq_buffer_t)); 
+  mon_buffer = nuphase_buf_init( config.buffer_capacity, sizeof(acq_buffer_t)); 
 
 
+  // set up the threads 
+  pthread_create(&the_mon_thread, 0, monitor_thread, 0); 
+  pthread_create(&the_acq_thread, 0, acq_thread, 0); 
+  pthread_create(&the_wri_thread, 0, write_thread, 0); 
+  
   return 0;
-
 }
 
 int teardown() 
 {
+  pthread_join(the_acq_thread,0); 
+  pthread_join(the_mon_thread,0); 
+  pthread_join(the_wri_thread,0); 
+  nuphase_close(device); 
   return 0;
 }
 
 
-int readConfig(int first_time)
+int read_config(int first_time)
 {
 
+  char * cfgpath = 0;  
+  
+  asprintf(&cfgpath, "%s/%s", getenv(CONFIG_DIR_ENV), CONFIG_DIR_ACQ_NAME); 
+
+  pthread_mutex_lock(&config_lock); 
+
+  nuphase_acq_config_read( cfgpath, &config); 
+  pthread_mutex_unlock(&config_lock); 
+
+  pid_state_init(&control, config.k_p, config.k_i, config.k_d); 
+
+  if (!first_time) 
+  {
+    // what do we need to change? 
+   
+    nuphase_set_buffer_length(device, config.waveform_length); 
+    nuphase_set_spi_clock(device, config.spi_clock); 
+
+    //rewrite run number in case we are using a different file 
+    FILE * run_file = fopen(tmp_run_file,"w"); 
+    fprintf(run_file,"%d\n", run_number+1); 
+    fclose(run_file); 
+    rename(tmp_run_file, config.run_file); 
+  }
+
+  free(cfgpath); 
 
   return 0;
 }
