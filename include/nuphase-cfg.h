@@ -61,7 +61,7 @@ typedef struct nuphase_acq_cfg
   // print to screen interval 
   int print_interval; 
 
-  /* The length of a run in seconds */ 
+  /* The maximum length of a run in seconds */ 
   unsigned run_length; 
 
   /* The SPI clock speed, in MHz */ 
@@ -89,6 +89,8 @@ typedef struct nuphase_acq_cfg
   int events_per_file; 
 
   int status_per_file; 
+
+  int n_fast_scaler_avg; 
 
 } nuphase_acq_cfg_t; 
 

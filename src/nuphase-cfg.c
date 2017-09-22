@@ -206,12 +206,12 @@ void nuphase_acq_config_init ( nuphase_acq_cfg_t * c)
   c->output_directory = "/data/" ; 
 
   int i; 
-  for ( i = 0; i < NP_NUM_BEAMS; i++) c->scaler_goal[i] = 1.0; 
+  for ( i = 0; i < NP_NUM_BEAMS; i++) c->scaler_goal[i] = 2; 
 
 
   //TODO tune this 
   c->k_p = 10; 
-  c->k_i = 0.1; 
+  c->k_i = 10; 
   c->k_d = 0; 
 
   c->trigger_mask = 0xe; 
@@ -220,27 +220,43 @@ void nuphase_acq_config_init ( nuphase_acq_cfg_t * c)
   c->channel_read_mask[1] = 0x7;
 
   c->buffer_capacity = 100; 
-  c->monitor_interval = 5; 
+  c->monitor_interval = 1.0; 
   c->sw_trigger_interval = 1; 
   c->print_interval = 5; 
 
   c->run_length = 7200; 
   c->spi_clock = 20; 
-  c->waveform_length = 624; 
+  c->waveform_length = 384; 
   c->enable_phased_trigger = 1; 
   c->calpulser_state = 0; 
 
 
-  //no attenuation? 
-  for ( i = 0; i < NP_NUM_CHAN; i++) c->attenuation[0][i] = 0; 
-  for ( i = 0; i < NP_NUM_CHAN; i++) c->attenuation[1][i] = 0; 
+  //provisional reasonable values 
+  c->attenuation[0][0] = 9; 
+  c->attenuation[0][1] = 3; 
+  c->attenuation[0][2] = 9; 
+  c->attenuation[0][3] = 8; 
+  c->attenuation[0][4] = 4; 
+  c->attenuation[0][5] = 14; 
+  c->attenuation[0][6] = 10; 
+  c->attenuation[0][7] = 2; 
+  c->attenuation[1][0] = 14; 
+  c->attenuation[1][1] = 1; 
+  c->attenuation[1][2] = 14; 
+  c->attenuation[1][3] = 14; 
+  c->attenuation[1][4] = 0; 
+  c->attenuation[1][5] = 0; 
+  c->attenuation[1][6] = 0; 
+  c->attenuation[1][7] = 0; 
+
 
   c->pretrigger = 4; 
-  c->slow_scaler_weight = 0.9; 
-  c->fast_scaler_weight = 0.1; 
-  c->secs_before_phased_trigger = 10; 
+  c->slow_scaler_weight = 0.3; 
+  c->fast_scaler_weight = 0.7; 
+  c->secs_before_phased_trigger = 20; 
   c->events_per_file = 1000; 
   c->status_per_file = 200; 
+  c->n_fast_scaler_avg = 20; 
 }
 
 int nuphase_acq_config_read(const char * fi, nuphase_acq_cfg_t * c) 
