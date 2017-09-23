@@ -20,13 +20,17 @@ int nuphase_get_cfg_file(char ** name, nuphase_program_t p)
   switch (p) 
   {
     case NUPHASE_STARTUP: 
-      asprintf(name, "%s/%s", getenv(CONFIG_DIR_ENV) ?: "." , CONFIG_DIR_STARTUP_NAME); 
+      asprintf(name, "%s/%s", getenv(CONFIG_DIR_ENV) ?: "cfg" , CONFIG_DIR_STARTUP_NAME); 
+      break;
     case NUPHASE_HK: 
-      asprintf(name, "%s/%s", getenv(CONFIG_DIR_ENV) ?: "." , CONFIG_DIR_HK_NAME); 
+      asprintf(name, "%s/%s", getenv(CONFIG_DIR_ENV) ?: "cfg" , CONFIG_DIR_HK_NAME); 
+      break;
     case NUPHASE_ACQ: 
-      asprintf(name, "%s/%s", getenv(CONFIG_DIR_ENV) ?: "." , CONFIG_DIR_ACQ_NAME); 
+      asprintf(name, "%s/%s", getenv(CONFIG_DIR_ENV) ?: "cfg" , CONFIG_DIR_ACQ_NAME); 
+      break;
     case NUPHASE_COPY: 
-      asprintf(name, "%s/%s", getenv(CONFIG_DIR_ENV) ?: "." , CONFIG_DIR_COPY_NAME); 
+      asprintf(name, "%s/%s", getenv(CONFIG_DIR_ENV) ?: "cfg" , CONFIG_DIR_COPY_NAME); 
+      break;
     default: 
       return -1; 
   }
