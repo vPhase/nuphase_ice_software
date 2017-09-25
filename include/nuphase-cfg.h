@@ -42,7 +42,7 @@ typedef struct nuphase_acq_cfg
   const char * output_directory; 
 
   //scaler goals, in Hz 
-  float scaler_goal[NP_NUM_BEAMS]; 
+  double scaler_goal[NP_NUM_BEAMS]; 
 
   // trigger mask
   uint16_t trigger_mask; 
@@ -60,10 +60,10 @@ typedef struct nuphase_acq_cfg
   size_t buffer_capacity; 
 
   /* Monitor interval  (in seconds) */ 
-  float monitor_interval; 
+  double monitor_interval; 
 
   /* SW trigger interval (in seconds) */ 
-  float sw_trigger_interval; 
+  double sw_trigger_interval; 
 
   // print to screen interval 
   int print_interval; 
@@ -143,6 +143,9 @@ typedef struct nuphase_start_cfg
   nuphase_asps_method_t asps_method; 
   int heater_current; 
   int poll_interval; 
+  const char * set_attenuation_cmd; 
+  double desired_rms_master; 
+  double desired_rms_slave; 
 }nuphase_start_cfg_t; 
 
 

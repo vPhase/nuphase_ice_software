@@ -23,6 +23,9 @@ void nuphase_start_config_init(nuphase_start_cfg_t * c)
   c->asps_method = NP_ASPS_SERIAL; 
   c->heater_current = 500; 
   c->poll_interval = 5; 
+  c->set_attenuation_cmd = " /usr/bin/env python /home/nuphase/nuphase-python/set_attenuation.py"; 
+  c->desired_rms_master = 4.2; 
+  c->desired_rms_slave = 7.0; 
 }
 
 static void lookup_asps_method(const config_t * cfg, nuphase_asps_method_t * method, const char * key)
@@ -52,8 +55,16 @@ int nuphase_start_config_read(const char * file, nuphase_start_cfg_t * c)
   config_lookup_int(&cfg,"min_temperature", &c->min_temperature);
   config_lookup_int(&cfg,"heater_current", &c->heater_current);
   config_lookup_int(&cfg,"poll_interval", &c->poll_interval);
+  config_lookup_float(&cfg,"desired_rms_master", &c->desired_rms_master);
+  config_lookup_float(&cfg,"desired_rms_slave", &c->desired_rms_slave);
 
   lookup_asps_method(&cfg, &c->asps_method, "asps_method"); 
+
+  const char * attenuation_cmd; 
+  if (config_lookup_string(&cfg, "set_attenuation_cmd", &attenuation_cmd))
+  {
+    c->set_attenuation_cmd = strdup(attenuation_cmd); //memory leak :( 
+  }
 
   config_destroy(&cfg); 
   return 0; 
@@ -65,14 +76,21 @@ int nuphase_start_config_write(const char * file, const nuphase_start_cfg_t * c)
 
   if (!f) return 1; 
 
-  fprintf(f,"//Configuration file for nuphase-start\n");  
+  fprintf(f,"//Configuration file for nuphase-start\n\n");  
   fprintf(f, "//Minimum temperature, in C, to turn on FPGA's\n"); 
   fprintf(f, "min_temperature=%d;\n\n", c->min_temperature); 
   fprintf(f,"// Current in mA to run the heater at\n"); 
-  fprintf(f,"heater_current = %d;\n", c->heater_current);  
+  fprintf(f, "min_temperature=%d;\n\n", c->min_temperature); 
+  fprintf(f,"// ASPS method, \"serial\" or \"http\"\n"); 
+  fprintf(f,"asps_method = \"%s\";\n\n", c->asps_method == NP_ASPS_HTTP ? "http": "serial");  
   fprintf(f,"// The polling interval (to check temperature and heater state) in seconds\n"); 
-  fprintf(f,"poll_interval = %d;\n", c->poll_interval); 
-
+  fprintf(f,"poll_interval = %d;\n\n", c->poll_interval); 
+  fprintf(f,"// Command to run after turning on boards to tune attenuations \n"); 
+  fprintf(f,"set_attenuation_cmd = \"%s\";\n\n", c->set_attenuation_cmd); 
+  fprintf(f,"//rms goal for master \n"); 
+  fprintf(f,"desired_rms_master = %f;\n\n", c->desired_rms_master); 
+  fprintf(f,"//rms goal for slave \n"); 
+  fprintf(f,"desired_rms_slave = %f;\n\n", c->desired_rms_slave); 
   fclose(f); 
 
   return 0; 
@@ -137,13 +155,13 @@ int nuphase_hk_config_write(const char * file, const nuphase_hk_cfg_t * c)
   fprintf(f, "//Polling interval, in seconds. Treated as integer.  \n"); 
   fprintf(f, "interval=%d;\n\n", c->interval); 
   fprintf(f, "//Asps communication method. Valid values are \"serial\" and \"http\"\n"); 
-  fprintf(f, "asps_method=%s;\n\n", c->asps_method == NP_ASPS_HTTP  ? "http" : "serial" ); 
+  fprintf(f, "asps_method=\"%s\";\n\n", c->asps_method == NP_ASPS_HTTP  ? "http" : "serial" ); 
   fprintf(f, "//max seconds per file, in seconds. Treated as integer.  \n"); 
   fprintf(f, "max_secs_per_file=%d;\n\n", c->max_secs_per_file); 
   fprintf(f, "//output directory \n"); 
-  fprintf(f, "out_dir=%s;\n\n", c->out_dir); 
+  fprintf(f, "out_dir=\"%s\";\n\n", c->out_dir); 
   fprintf(f, "//shared binary data name \n"); 
-  fprintf(f, "shm_name=%s;\n\n", c->shm_name); 
+  fprintf(f, "shm_name=\"%s\";\n\n", c->shm_name); 
   fclose(f); 
 
   return 0; 
@@ -182,8 +200,8 @@ int nuphase_copy_config_write(const char * file, const nuphase_copy_cfg_t * c)
 {
   FILE * f = fopen(file,"w"); 
   if (!f) return 1; 
-  fprintf(f,"//Cofniguration file for nuphase-copy\n"); 
-  fprintf(f,"remote_hostname=%s\n", c->remote_hostname); 
+  fprintf(f,"//Configuration file for nuphase-copy\n\n"); 
+  fprintf(f,"remote_hostname=\"%s\";\n", c->remote_hostname); 
   fclose(f); 
 
   return 0; 
@@ -290,7 +308,7 @@ int nuphase_acq_config_write(const char * fi, const nuphase_acq_cfg_t * c)
   {
     fprintf(f, "     %d : %g%c\n", i, c->scaler_goal[i], i < NP_NUM_BEAMS - 1 ? ',' : ' '); 
   }
-  fprintf(f,"    }\n\n"); 
+  fprintf(f,"    };\n\n"); 
 
   fprintf(f,"   //the beams allowed to participate in the trigger\n"); 
   fprintf(f,"   trigger_mask = 0x%x;\n\n", c->trigger_mask);  
@@ -298,7 +316,7 @@ int nuphase_acq_config_write(const char * fi, const nuphase_acq_cfg_t * c)
   fprintf(f,"   // the channels on the master allowed to participate in the trigger\n"); 
   fprintf(f,"   channel_mask = 0x%x;\n\n", c->channel_mask); 
 
-  fprintf(f,"   // pid loop proportional term "); 
+  fprintf(f,"   // pid loop proportional term\n"); 
   fprintf(f,"   k_p = %g;\n\n", c->k_p); 
 
   fprintf(f,"   // pid loop integral term\n"); 
@@ -326,10 +344,10 @@ int nuphase_acq_config_write(const char * fi, const nuphase_acq_cfg_t * c)
   fprintf(f,"   slow_scaler_weight = %g;\n\n", c->slow_scaler_weight); 
 
   fprintf(f,"  //number of fast scalers to average\n"); 
-  fprintf(f,"  n_fast_scaler_avg = %d\n\n", c->n_fast_scaler_avg); 
+  fprintf(f,"  n_fast_scaler_avg = %d;\n\n", c->n_fast_scaler_avg); 
 
   fprintf(f,"  //File to persist the status info (primarily for saving thresholds between restarts)\n") ;
-  fprintf(f,"  status_save_file = %s\n\n", c->status_save_file); 
+  fprintf(f,"  status_save_file = \"%s\"\n\n", c->status_save_file); 
 
   fprintf(f,"  // load thresholds from status file on start.\n");  
   fprintf(f,"  load_thresholds_from_status_file=%d\n\n", c->load_thresholds_from_status_file); 
