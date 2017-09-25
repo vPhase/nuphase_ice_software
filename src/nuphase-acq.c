@@ -663,6 +663,11 @@ static int configure_device()
   nuphase_set_pretrigger(device, (uint8_t) config.pretrigger & 0x7); 
 
 
+  if (config.apply_attenuations)
+  {
+    nuphase_set_attenuation(device, config.attenuation[0], config.attenuation[1]); 
+  }
+
  
   return 0; 
 
