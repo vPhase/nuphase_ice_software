@@ -13,7 +13,6 @@
 
 
 
-
 //////////////////////////////////////////////////////
 //start config 
 /////////////////////////////////////////////////////
@@ -203,10 +202,14 @@ void nuphase_acq_config_init ( nuphase_acq_cfg_t * c)
   c->spi_devices[0] = "/dev/spidev2.0"; 
   c->spi_devices[1] = "/dev/spidev1.0"; 
   c->run_file = "/data/runfile" ; 
+  c->status_save_file = "/data/last.st.bin"; 
   c->output_directory = "/data/" ; 
+  c->alignment_command = "/usr/bin/env python /home/nuphase/nuphase-python/align_adcs.py" ; 
+
+  c->load_thresholds_from_status_file = 1; 
 
   int i; 
-  for ( i = 0; i < NP_NUM_BEAMS; i++) c->scaler_goal[i] = 2; 
+  for ( i = 0; i < NP_NUM_BEAMS; i++) c->scaler_goal[i] = 1; 
 
 
   //TODO tune this 
@@ -231,19 +234,22 @@ void nuphase_acq_config_init ( nuphase_acq_cfg_t * c)
   c->calpulser_state = 0; 
 
 
+  c->apply_attenuations = 1; 
+  c->enable_trigout=1; 
+
   //provisional reasonable values 
   c->attenuation[0][0] = 9; 
   c->attenuation[0][1] = 3; 
-  c->attenuation[0][2] = 9; 
+  c->attenuation[0][2] = 11; 
   c->attenuation[0][3] = 8; 
-  c->attenuation[0][4] = 4; 
-  c->attenuation[0][5] = 14; 
-  c->attenuation[0][6] = 10; 
-  c->attenuation[0][7] = 2; 
-  c->attenuation[1][0] = 14; 
-  c->attenuation[1][1] = 1; 
-  c->attenuation[1][2] = 14; 
-  c->attenuation[1][3] = 14; 
+  c->attenuation[0][4] = 7; 
+  c->attenuation[0][5] = 19; 
+  c->attenuation[0][6] = 11; 
+  c->attenuation[0][7] = 3; 
+  c->attenuation[1][0] = 23; 
+  c->attenuation[1][1] = 10; 
+  c->attenuation[1][2] = 27; 
+  c->attenuation[1][3] = 27; 
   c->attenuation[1][4] = 0; 
   c->attenuation[1][5] = 0; 
   c->attenuation[1][6] = 0; 
@@ -319,6 +325,16 @@ int nuphase_acq_config_write(const char * fi, const nuphase_acq_cfg_t * c)
   fprintf(f,"   //weight of slow scaler in pid loop\n"); 
   fprintf(f,"   slow_scaler_weight = %g;\n\n", c->slow_scaler_weight); 
 
+  fprintf(f,"  //number of fast scalers to average\n"); 
+  fprintf(f,"  n_fast_scaler_avg = %d\n\n", c->n_fast_scaler_avg); 
+
+  fprintf(f,"  //File to persist the status info (primarily for saving thresholds between restarts)\n") ;
+  fprintf(f,"  status_save_file = %s\n\n", c->status_save_file); 
+
+  fprintf(f,"  // load thresholds from status file on start.\n");  
+  fprintf(f,"  load_thresholds_from_status_file=%d\n\n", c->load_thresholds_from_status_file); 
+
+
   fprintf(f,"};\n\n"); 
 
   fprintf(f,"// settings related to the acquisition\n"); 
@@ -328,58 +344,72 @@ int nuphase_acq_config_write(const char * fi, const nuphase_acq_cfg_t * c)
   fprintf(f,"  //spi devices, master first, requires restart to change\n"); 
   fprintf(f,"  spi_devices = (\"%s\", \"%s\"); \n\n", c->spi_devices[0], c->spi_devices[1]); 
 
-  /*
-  // circular buffer capacity. In-memory storage in between acquisition and writing. Requires restart. 
-  buffer_capacity = 100; 
+  
+  fprintf(f,"  // circular buffer capacity. In-memory storage in between acquisition and writing. Requires restart.\n"); 
+  fprintf(f,"  buffer_capacity = %d;\n\n", c->buffer_capacity); 
 
-  //the length of a waveform, in samples. 
-  waveform_length = 624; 
+  fprintf(f,"  //the length of a waveform, in samples. \n"); 
+  fprintf(f,"  waveform_length = %d;\n\n", c->waveform_length); 
 
-  //the pretrigger window length, in hardware units
-  pretrigger = 4; 
+  fprintf(f,"  //the pretrigger window length, in hardware units\n"); 
+  fprintf(f,"  pretrigger = %d;\n\n", c->pretrigger); 
 
-  //calpulser state, 0 (off) , 2 (baseline)  or 3 (calpulser) 
-  calpulser = 0; 
+  fprintf(f,"  //calpulser state, 0 (off) , 2 (baseline)  or 3 (calpulser)\n"); 
+  fprintf(f,"  calpulser_state = %d;\n\n", c->calpulser_state); 
 
-  //spi clock speed, MHz
-  spi_clock = 20; 
+  fprintf(f,"  // Whether or not to enable the external triggers\n"); 
+  fprintf(f,"  enable_trigout = %d;\n\n", c->enable_trigout); 
+
+  fprintf(f,"  //spi clock speed, MHz\n"); 
+  fprintf(f,"  spi_clock = %d;\n\n", c->spi_clock); 
  
-  // attenuation, per channel
-  attenuation = ( {0:0,1:0,2:0,3:0,4:0,5:0,6:0,7:0}, {0:0,1:0,2:0,3:0,4:0,5:0,6:0,7:0} );  
+  fprintf(f,"  // True to apply attenuations \n"); 
+  fprintf(f,"  apply_attenuations = %d;\n\n", c->apply_attenuations); 
 
-  //which channels to digitize
-  channel_read_mask = (0xf, 0x7) ; 
-};
+  fprintf(f,"  // attenuation, per channel, if applied. \n"); 
 
+  fprintf(f,"  attenuation = ( {"); 
+  for (i = 0; i < NP_NUM_CHAN; i++)
+    fprintf(f, i < NP_NUM_CHAN -1 ? "%d:%d," : "%d:%d", i, c->attenuation[0][i]); 
+  fprintf(f, "},{"); 
+  for (i = 0; i < NP_NUM_CHAN; i++) 
+    fprintf(f, i < NP_NUM_CHAN -1 ? "%d:%d," : "%d:%d", i, c->attenuation[1][i]); 
+  fprintf(f,"} );\n\n"); 
 
-//settings related to output
-output: 
-{
-// Run file, used to persist run number
-  run_file = "/data/runfile"; 
+  fprintf(f,"  //which channels to digitize\n"); 
+  fprintf(f,"  channel_read_mask = (0x%x, 0x%x); \n\n", c->channel_read_mask[0], c->channel_read_mask[1]); 
 
-  // output directory, data will go here
-  output_directory = "/data" ;
+  fprintf(f,"  //command used to run the alignment program.\n"); 
+  fprintf(f,"  alignment_command=\"%s\",\n\n", c->alignment_command); 
 
-  //print to screen interval 
-  print_interval = 1; 
-
-  // run length, in seconds
-  run_length = 3600; 
-
-  //events per output file
-  events_per_file = 1000; 
-
-  //statuses per output file
-  status_per_file = 200; 
-};
-*/
+  fprintf(f,"};\n\n"); 
 
 
+  fprintf(f,"//settings related to output\n"); 
+  fprintf(f,"output: \n") ; 
+  fprintf(f,"{\n"); 
 
+  fprintf(f,"  // Run file, used to persist run number\n"); 
+  fprintf(f,"  run_file = \"%s\";\n\n", c->run_file);  
+
+  fprintf(f,"  // output directory, data will go here\n"); 
+  fprintf(f,"  output_directory = \"%s\" ;\n\n", c->output_directory); 
+
+  fprintf(f,"  //print to screen interval (0 to disable)\n"); 
+  fprintf(f,"  print_interval = %d;\n\n", c->print_interval); 
+
+  fprintf(f,"  // run length, in seconds\n"); 
+  fprintf(f,"  run_length = %d; \n\n",c->run_length); 
+
+  fprintf(f,"  //events per output file\n");
+  fprintf(f,"  events_per_file = %d;\n\n", c->events_per_file); 
+
+  fprintf(f,"  //statuses per output file\n"); 
+  fprintf(f,"  status_per_file = %d;\n\n", c->status_per_file); 
+
+  fprintf(f,"};\n\n"); 
 
   return 0; 
-
 }
 
 

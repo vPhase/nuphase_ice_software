@@ -31,6 +31,13 @@ typedef struct nuphase_acq_cfg
   /* the name of the file holding the desired run number*/ 
   const char * run_file; 
 
+  /* The name of the file holding the last status */ 
+  const char * status_save_file;
+
+  /* Whether  or not to load the last thresholds from the status file on startup */ 
+  int load_thresholds_from_status_file; 
+
+
   /* The output directory for files */ 
   const char * output_directory; 
 
@@ -73,10 +80,24 @@ typedef struct nuphase_acq_cfg
   /** 1 to enable the phased trigger, 0 otherwise */ 
   int enable_phased_trigger; 
 
-  /** cal pulser state , 0 for off, 3 for on (or 2 for nothing) */ 
+  /** cal pulser state , 0 for off, 3 for on (or 2 for nothing)
+   *
+   * I don't think we'd ever want it on. If you do, make sure
+   * you disable the trigout 
+   * */ 
   int calpulser_state; 
 
+  // enable the trigout
+  int enable_trigout;
+
+  // Use this to apply the attenuations instead of just
+  // using whatever is on the board. 
+  int apply_attenuations; 
   uint8_t attenuation [NP_MAX_BOARDS][NP_NUM_CHAN]; 
+
+
+  // Program called to check alignment / align the cal pulser 
+  const char * alignment_command; 
 
   int pretrigger; 
 
