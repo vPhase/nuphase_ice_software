@@ -7,7 +7,7 @@
 LIBNUPHASE_DIR=..
 
 #installation prefix for programs 
-PREFIX=/usr/local/nuphase
+PREFIX=/nuphase
 
 # location for config files 
 NUPHASE_CONFIG_DIR=${PREFIX}/cfg 
@@ -54,6 +54,15 @@ $(BINDIR)/%: src/%.c $(INCLUDES) $(OBJS) Makefile | $(BINDIR)
 
 
 install: $(PROGRAMS) $(INCLUDES) etc/nuphase.cfg 
+	install -d $(PREFIX)
+	install -d $(PREFIX)/bin
+	install $(PROGRAMS) $(PREFIX)/bin
+	install -d $(PREFIX)/cfg
+	cp cfg/* $(PREFIX)/cfg 
+	install etc/nuphase.cfg /etc
+	install -d $(PREFIX)/include
+	install $(INCLUDES) $(PREFIX)/include 
+
 
 
 clean: 
