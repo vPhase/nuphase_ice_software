@@ -17,7 +17,7 @@ NUPHASE_CONFIG_DIR=${PREFIX}/cfg
 ####################################################################
 
 
-CFLAGS +=-g -Iinclude -Wall -I$(LIBNUPHASE_DIR)/libnuphase -D_GNU_SOURCE
+CFLAGS +=-g -O2 -Iinclude -Wall -I$(LIBNUPHASE_DIR)/libnuphase -D_GNU_SOURCE
 LDFLAGS+=-L$(LIBNUPHASE_DIR)/libnuphase -lnuphase -lnuphasedaq  -lz -lpthread -lconfig -lrt
 
 CC=gcc 
@@ -25,10 +25,10 @@ BUILDDIR=build
 INCLUDEDIR=include
 BINDIR=bin
 
-.PHONY: clean install all doc
+.PHONY: clean install all doc default-configs
 
 OBJS:= $(addprefix $(BUILDDIR)/, nuphase-buf.o nuphase-common.o nuphase-cfg.o )
-PROGRAMS := $(addprefix $(BINDIR)/, nuphase-acq nuphase-startup nuphase-hk nuphase-copy )
+PROGRAMS := $(addprefix $(BINDIR)/, nuphase-acq nuphase-startup nuphase-hk nuphase-copy nuphase-make-default-config nuphase-check-config )
 INCLUDES := $(addprefix $(INCLUDEDIR)/, $(shell ls $(INCLUDEDIR)))
 
 all: $(PROGRAMS) 
@@ -37,6 +37,15 @@ etc/nuphase.cfg:
 	mkdir -p etc 
 	echo NUPHASE_PATH=${PREFIX}/bin > etc/nuphase.cfg 
 	echo NUPHASE_CONFIG_DIR=${NUPHASE_CONFIG_DIR} 
+
+
+default-configs: $(BINDIR)/nuphase-make-default-config 
+	$(BINDIR)/nuphase-make-default-config acq cfg/acq.cfg
+	$(BINDIR)/nuphase-make-default-config startup cfg/startup.cfg
+	$(BINDIR)/nuphase-make-default-config hk cfg/hk.cfg
+	$(BINDIR)/nuphase-make-default-config copy cfg/copy.cfg
+
+
 
 $(BUILDDIR): 
 	mkdir -p $(BUILDDIR)
