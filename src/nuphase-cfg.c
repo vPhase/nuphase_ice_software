@@ -80,7 +80,7 @@ int nuphase_start_config_write(const char * file, const nuphase_start_cfg_t * c)
   fprintf(f, "//Minimum temperature, in C, to turn on FPGA's\n"); 
   fprintf(f, "min_temperature=%d;\n\n", c->min_temperature); 
   fprintf(f,"// Current in mA to run the heater at\n"); 
-  fprintf(f, "min_temperature=%d;\n\n", c->min_temperature); 
+  fprintf(f, "heater_current=%d;\n\n", c->heater_current); 
   fprintf(f,"// ASPS method, \"serial\" or \"http\"\n"); 
   fprintf(f,"asps_method = \"%s\";\n\n", c->asps_method == NP_ASPS_HTTP ? "http": "serial");  
   fprintf(f,"// The polling interval (to check temperature and heater state) in seconds\n"); 
@@ -135,7 +135,7 @@ int nuphase_hk_config_read(const char * file, nuphase_hk_cfg_t * c)
     c->out_dir = strdup(outdir_str); //memory leak, but not easy to do anything else here. 
   }
   const char * shm_str; 
-  if (config_lookup_string(&cfg,"out_dir", &shm_str))
+  if (config_lookup_string(&cfg,"shm_name", &shm_str))
   {
     c->shm_name = strdup(shm_str); //memory leak, but not easy to do anything else here. 
   }
