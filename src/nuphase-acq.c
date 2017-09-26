@@ -668,6 +668,10 @@ static int configure_device()
     nuphase_set_attenuation(device, config.attenuation[0], config.attenuation[1]); 
   }
 
+  nuphase_set_trigger_mask(device, config.trigger_mask); 
+  nuphase_set_channel_mask(device, config.channel_mask); 
+
+
  
   return 0; 
 
@@ -850,9 +854,8 @@ int read_config(int first_time)
 
   if (!first_time) 
   {
-    // what do we need to change? 
-    nuphase_set_buffer_length(device, config.waveform_length); 
-    nuphase_set_spi_clock(device, config.spi_clock); 
+
+    configure_device(); 
 
     //rewrite run number in case we are using a different file 
     FILE * run_file = fopen(tmp_run_file,"w"); 
