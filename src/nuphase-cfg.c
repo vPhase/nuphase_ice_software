@@ -107,7 +107,8 @@ void nuphase_hk_config_init(nuphase_hk_cfg_t * c)
   c->asps_method = NP_ASPS_SERIAL; 
   c->out_dir = "/data/hk/"; 
   c->max_secs_per_file = 600; 
-  c->shm_name = "/dev/shm/hk.bin"; 
+  c->shm_name = "/hk.bin"; 
+  c->print_to_screen = 1; 
 }
 
 int nuphase_hk_config_read(const char * file, nuphase_hk_cfg_t * c) 
@@ -125,6 +126,7 @@ int nuphase_hk_config_read(const char * file, nuphase_hk_cfg_t * c)
      return 1; 
   }
   config_lookup_int(&cfg,"interval", &c->interval);
+  config_lookup_int(&cfg,"print_to_screen", &c->print_to_screen);
   config_lookup_int(&cfg,"max_secs_per_file", &c->max_secs_per_file);
   lookup_asps_method(&cfg, &c->asps_method, "asps_method"); 
 
@@ -162,6 +164,8 @@ int nuphase_hk_config_write(const char * file, const nuphase_hk_cfg_t * c)
   fprintf(f, "out_dir=\"%s\";\n\n", c->out_dir); 
   fprintf(f, "//shared binary data name \n"); 
   fprintf(f, "shm_name=\"%s\";\n\n", c->shm_name); 
+  fprintf(f, "//1 to print to screen\n"); 
+  fprintf(f, "print_to_screen=%d;\n\n", c->print_to_screen); 
   fclose(f); 
 
   return 0; 

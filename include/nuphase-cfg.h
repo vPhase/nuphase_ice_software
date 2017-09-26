@@ -161,6 +161,7 @@ typedef struct nuphase_hkd_cfg
   int max_secs_per_file; // maximum number of seconds per file. Default 600
   const char * shm_name; //shared memory name
   nuphase_asps_method_t asps_method;  //asps output method 
+  int print_to_screen; //1 to print to screen 
 
 } nuphase_hk_cfg_t;
 
