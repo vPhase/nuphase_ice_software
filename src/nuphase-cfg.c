@@ -235,10 +235,10 @@ void nuphase_acq_config_init ( nuphase_acq_cfg_t * c)
   c->k_i = 10; 
   c->k_d = 0; 
 
-  c->trigger_mask = 0xe; 
-  c->channel_mask = 0xf; 
-  c->channel_read_mask[0] = 0xf;
-  c->channel_read_mask[1] = 0x7;
+  c->trigger_mask = 0x7fff; 
+  c->channel_mask = 0xff; 
+  c->channel_read_mask[0] = 0xff;
+  c->channel_read_mask[1] = 0xf;
 
   c->buffer_capacity = 100; 
   c->monitor_interval = 1.0; 
@@ -247,12 +247,12 @@ void nuphase_acq_config_init ( nuphase_acq_cfg_t * c)
 
   c->run_length = 7200; 
   c->spi_clock = 20; 
-  c->waveform_length = 384; 
+  c->waveform_length = 512; 
   c->enable_phased_trigger = 1; 
   c->calpulser_state = 0; 
 
 
-  c->apply_attenuations = 1; 
+  c->apply_attenuations = 0; 
   c->enable_trigout=1; 
 
   //provisional reasonable values 
@@ -285,8 +285,125 @@ void nuphase_acq_config_init ( nuphase_acq_cfg_t * c)
 
 int nuphase_acq_config_read(const char * fi, nuphase_acq_cfg_t * c) 
 {
-  fprintf(stderr,"Not implemented yet"); 
-  return 1; 
+
+  config_t cfg; 
+  config_init(&cfg); 
+  config_set_auto_convert(&cfg, CONFIG_TRUE); 
+  if (!config_read_file(&cfg, fi))
+  {
+     fprintf(stderr, "%s:%d - %s\n", config_error_file(&cfg),
+     config_error_line(&cfg), config_error_text(&cfg));
+
+     config_destroy(&cfg); 
+     return 1; 
+  }
+ 
+  
+  int i; 
+  for (i = 0; i < NP_NUM_BEAMS; i++) 
+  {
+    char buf[128]; 
+    sprintf(buf, "control.scaler_goal.beam%d",i); 
+    config_lookup_float(&cfg, buf, &c->scaler_goal[i]); 
+  }
+
+  int tmp; 
+  if ( config_lookup_int(&cfg,"control.trigger_mask",&tmp))
+    c->trigger_mask = tmp; 
+  if (config_lookup_int(&cfg,"control.channel_mask",&tmp))
+    c->channel_mask = tmp; 
+  config_lookup_float(&cfg,"control.k_p",&c->k_p); 
+  config_lookup_float(&cfg,"control.k_i",&c->k_i); 
+  config_lookup_float(&cfg,"control.k_d",&c->k_d); 
+  config_lookup_float(&cfg,"control.monitor_interval",&c->monitor_interval); 
+  config_lookup_float(&cfg,"control.sw_trigger_interval",&c->sw_trigger_interval); 
+  config_lookup_int(&cfg,"control.enable_phased_trigger",&c->enable_phased_trigger); 
+  config_lookup_int(&cfg,"control.secs_before_phased_trigger",&c->secs_before_phased_trigger); 
+  config_lookup_float(&cfg,"control.fast_scaler_weight",&c->fast_scaler_weight); 
+  config_lookup_float(&cfg,"control.slow_scaler_weight",&c->slow_scaler_weight); 
+  config_lookup_int(&cfg,"control.n_fast_scaler_avg",&c->n_fast_scaler_avg); 
+
+
+  const char * status_save = 0; 
+
+  if (config_lookup_string(&cfg, "control.status_save_file", &status_save))
+  {
+    c->status_save_file = strdup(status_save); 
+  }
+
+  config_lookup_int(&cfg,"control.load_thresholds_from_status_file",&c->load_thresholds_from_status_file); 
+
+
+  const char *spi = 0; 
+
+  if (config_lookup_string(&cfg, "device.spi_devices.[0]", &spi))
+  {
+    c->spi_devices[0] = strdup(spi); 
+  }
+ 
+  if (config_lookup_string(&cfg, "device.spi_devices.[1]", &spi))
+  {
+    c->spi_devices[1] = strdup(spi); 
+  }
+
+
+
+  config_lookup_int(&cfg,"device.buffer_capacity", &c->buffer_capacity); 
+  config_lookup_int(&cfg,"device.waveform_length", &c->waveform_length); 
+  config_lookup_int(&cfg,"device.pretrigger", &c->pretrigger); 
+  config_lookup_int(&cfg,"device.calpulser_state", &c->calpulser_state); 
+  config_lookup_int(&cfg,"device.enable_trigout", &c->enable_trigout); 
+  config_lookup_int(&cfg,"device.spi_clock", &c->spi_clock); 
+  config_lookup_int(&cfg,"device.apply_attenuations", &c->apply_attenuations); 
+
+  int b;
+  for (b = 0; b < NP_MAX_BOARDS; b++)
+  {
+    for (i = 0; i < NP_NUM_CHAN; i++) 
+    {
+      char buf[128]; 
+      sprintf(buf,"device.attenuation.[%d].ch%d", b,i); 
+      if (config_lookup_int(&cfg,buf, &tmp) )
+      {
+        c->attenuation[b][i]=tmp; 
+      }
+    }
+  }
+
+  
+  if (config_lookup_int(&cfg, "device.channel_read_mask.[0]", &tmp)) 
+    c->channel_read_mask[0] = tmp; 
+  if (config_lookup_int(&cfg, "device.channel_read_mask.[1]", &tmp))
+    c->channel_read_mask[1] = tmp; 
+
+  const char * cmd; 
+  if (config_lookup_string(&cfg, "device.alignment_command", &cmd) )
+  {
+    c->alignment_command = strdup (cmd); 
+  }
+
+  const char * run_file ; 
+  if (config_lookup_string( &cfg, "output.run_file", &run_file))
+  {
+    c->run_file = strdup(run_file); 
+  }
+
+  const char * output_directory ; 
+  if (config_lookup_string( &cfg, "output.output_directory", &output_directory))
+  {
+    c->output_directory = strdup(output_directory); 
+  }
+
+
+  config_lookup_int(&cfg,"output.print_interval", &c->print_interval); 
+  config_lookup_int(&cfg,"output.run_length", &c->run_length); 
+  config_lookup_int(&cfg,"output.events_per_file", &c->events_per_file); 
+  config_lookup_int(&cfg,"output.status_per_file", &c->status_per_file); 
+
+
+
+  return 0; 
+
 }
 
 int nuphase_acq_config_write(const char * fi, const nuphase_acq_cfg_t * c) 
@@ -303,10 +420,10 @@ int nuphase_acq_config_write(const char * fi, const nuphase_acq_cfg_t * c)
   fprintf(f,"control:\n"); 
   fprintf(f,"{\n"); 
   fprintf(f,"   // scaler goals for each beam, desired rate ( in Hz)\n"); 
-  fprintf(f,"   scaler_goals = {\n"); 
+  fprintf(f,"   scaler_goal = {\n"); 
   for (i = 0; i < NP_NUM_BEAMS; i++)
   {
-    fprintf(f, "     %d : %g%c\n", i, c->scaler_goal[i], i < NP_NUM_BEAMS - 1 ? ',' : ' '); 
+    fprintf(f, "     beam%d : %g;\n", i, c->scaler_goal[i]); 
   }
   fprintf(f,"    };\n\n"); 
 
@@ -386,13 +503,13 @@ int nuphase_acq_config_write(const char * fi, const nuphase_acq_cfg_t * c)
 
   fprintf(f,"  // attenuation, per channel, if applied. \n"); 
 
-  fprintf(f,"  attenuation = ( {"); 
+  fprintf(f,"  attenuation = ( \n               {"); 
   for (i = 0; i < NP_NUM_CHAN; i++)
-    fprintf(f, i < NP_NUM_CHAN -1 ? "%d:%d," : "%d:%d", i, c->attenuation[0][i]); 
-  fprintf(f, "},{"); 
+    fprintf(f,  "ch%d: %d;  " , i, c->attenuation[0][i]); 
+  fprintf(f, "} ,\n               {"); 
   for (i = 0; i < NP_NUM_CHAN; i++) 
-    fprintf(f, i < NP_NUM_CHAN -1 ? "%d:%d," : "%d:%d", i, c->attenuation[1][i]); 
-  fprintf(f,"} );\n\n"); 
+    fprintf(f,  "ch%d: %d;  " , i, c->attenuation[1][i]); 
+  fprintf(f,"} ) ;\n\n"); 
 
   fprintf(f,"  //which channels to digitize\n"); 
   fprintf(f,"  channel_read_mask = (0x%x, 0x%x); \n\n", c->channel_read_mask[0], c->channel_read_mask[1]); 

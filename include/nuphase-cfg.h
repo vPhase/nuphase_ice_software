@@ -57,7 +57,7 @@ typedef struct nuphase_acq_cfg
   double k_p,k_i, k_d; 
 
   /* The size of the circular buffers */ 
-  size_t buffer_capacity; 
+  int buffer_capacity; 
 
   /* Monitor interval  (in seconds) */ 
   double monitor_interval; 
@@ -69,13 +69,13 @@ typedef struct nuphase_acq_cfg
   int print_interval; 
 
   /* The maximum length of a run in seconds */ 
-  unsigned run_length; 
+  int run_length; 
 
   /* The SPI clock speed, in MHz */ 
-  unsigned spi_clock; 
+  int spi_clock; 
   
   // number of samples to save 
-  unsigned waveform_length;
+  int waveform_length;
 
   /** 1 to enable the phased trigger, 0 otherwise */ 
   int enable_phased_trigger; 
