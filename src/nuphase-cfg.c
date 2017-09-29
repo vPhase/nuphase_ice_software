@@ -26,6 +26,7 @@ void nuphase_start_config_init(nuphase_start_cfg_t * c)
   c->set_attenuation_cmd = " /usr/bin/env python /home/nuphase/nuphase-python/set_attenuation.py"; 
   c->desired_rms_master = 4.2; 
   c->desired_rms_slave = 7.0; 
+  c->out_dir = "/data/startup/"; 
 }
 
 static void lookup_asps_method(const config_t * cfg, nuphase_asps_method_t * method, const char * key)
@@ -66,6 +67,13 @@ int nuphase_start_config_read(const char * file, nuphase_start_cfg_t * c)
     c->set_attenuation_cmd = strdup(attenuation_cmd); //memory leak :( 
   }
 
+  const char * out_dir; 
+  if (config_lookup_string(&cfg, "out_dir", &out_dir))
+  {
+    c->out_dir = strdup(out_dir); //memory leak :( 
+  }
+
+
   config_destroy(&cfg); 
   return 0; 
 }
@@ -91,6 +99,9 @@ int nuphase_start_config_write(const char * file, const nuphase_start_cfg_t * c)
   fprintf(f,"desired_rms_master = %f;\n\n", c->desired_rms_master); 
   fprintf(f,"//rms goal for slave \n"); 
   fprintf(f,"desired_rms_slave = %f;\n\n", c->desired_rms_slave); 
+  fprintf(f, "//output directory \n"); 
+  fprintf(f, "out_dir=\"%s\";\n\n", c->out_dir); 
+ 
   fclose(f); 
 
   return 0; 

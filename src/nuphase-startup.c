@@ -42,8 +42,25 @@ int main (int nargs, char ** args)
   //now we can turn on the FPGA's via the ASPS so we have access to their temperature sensors
   nuphase_set_asps_power_state ( ASPS_MINIMAL|ASPS_FPGAS, cfg.asps_method); 
 
+  //make the output directory
+  gzFile out = 0; 
+
+  time_t start_t; 
+  time(&start_t); 
+
+  if(!mkdir_if_needed(cfg.out_dir)) 
+  {
+    char buf[1024]; 
+    struct tm * tim = gmtime(&start_t); 
+    sprintf(buf,"%s/%04d_%02d_%02d_%02d%02d%02d.startup.gz", cfg.out_dir, 1900 + tim->tm_year, tim->tm_mon + 1, tim->tm_mday, tim->tm_hour, tim->tm_min, tim->tm_sec); 
+    out = gzopen(buf,"w"); 
+  }
+
+
+
   //wait a little bit
   sleep(1); 
+
 
 
   nuphase_hk_t hk; 
@@ -55,8 +72,11 @@ int main (int nargs, char ** args)
 
     //get the hk info 
     nuphase_hk(&hk, cfg.asps_method); 
-
     nuphase_hk_print(stdout,&hk); 
+    if (out) 
+    {
+      nuphase_hk_gzwrite(out, &hk); 
+    }
 
 
     if (hk.temp_master > cfg.min_temperature)
@@ -88,6 +108,8 @@ int main (int nargs, char ** args)
     sleep(cfg.poll_interval); 
   } 
 
+
+
   //turn off heaters
   printf("Turning off heaters\n"); 
   nuphase_set_asps_heater_current(0, cfg.asps_method); 
@@ -112,6 +134,12 @@ int main (int nargs, char ** args)
 
   nuphase_hk(&hk, cfg.asps_method); 
   nuphase_hk_print(stdout,&hk); 
+
+  if (out) 
+  {
+    nuphase_hk_gzwrite(out, &hk); 
+    gzclose(out); 
+  }
 
 
   if (strlen(cfg.set_attenuation_cmd))

@@ -144,6 +144,7 @@ typedef struct nuphase_start_cfg
   int heater_current; 
   int poll_interval; 
   const char * set_attenuation_cmd; 
+  const char * out_dir; //output directory for hk data 
   double desired_rms_master; 
   double desired_rms_slave; 
 }nuphase_start_cfg_t; 
