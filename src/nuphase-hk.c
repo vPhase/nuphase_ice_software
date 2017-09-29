@@ -102,7 +102,7 @@ static const char * mk_name(time_t t)
 
   if (!ok) 
   {
-    sprintf(buf,"%s/hk/%04d/%02d/%02d/%02d%02d%02d.hk.gz", cfg.out_dir, 1900 + tim->tm_year, tim->tm_mon + 1, tim->tm_mday, tim->tm_hour, tim->tm_min, tim->tm_sec); 
+    sprintf(buf,"%s/%04d/%02d/%02d/%02d%02d%02d.hk.gz", cfg.out_dir, 1900 + tim->tm_year, tim->tm_mon + 1, tim->tm_mday, tim->tm_hour, tim->tm_min, tim->tm_sec); 
     return buf; 
   }
 

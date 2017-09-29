@@ -52,7 +52,7 @@ int main (int nargs, char ** args)
   {
     char buf[1024]; 
     struct tm * tim = gmtime(&start_t); 
-    sprintf(buf,"%s/%04d_%02d_%02d_%02d%02d%02d.startup.gz", cfg.out_dir, 1900 + tim->tm_year, tim->tm_mon + 1, tim->tm_mday, tim->tm_hour, tim->tm_min, tim->tm_sec); 
+    sprintf(buf,"%s/%04d_%02d_%02d_%02d%02d%02d.hk.gz", cfg.out_dir, 1900 + tim->tm_year, tim->tm_mon + 1, tim->tm_mday, tim->tm_hour, tim->tm_min, tim->tm_sec); 
     out = gzopen(buf,"w"); 
   }
 
