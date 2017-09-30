@@ -23,7 +23,7 @@ void nuphase_start_config_init(nuphase_start_cfg_t * c)
   c->asps_method = NP_ASPS_SERIAL; 
   c->heater_current = 500; 
   c->poll_interval = 5; 
-  c->set_attenuation_cmd = " /usr/bin/env python /home/nuphase/nuphase-python/set_attenuation.py"; 
+  c->set_attenuation_cmd = "cd /home/nuphase/nuphase-python; python set_attenuation.py"; 
   c->desired_rms_master = 4.2; 
   c->desired_rms_slave = 7.0; 
   c->out_dir = "/data/startup/"; 
@@ -237,7 +237,7 @@ void nuphase_acq_config_init ( nuphase_acq_cfg_t * c)
   c->run_file = "/data/runfile" ; 
   c->status_save_file = "/data/last.st.bin"; 
   c->output_directory = "/data/" ; 
-  c->alignment_command = "/usr/bin/env python /home/nuphase/nuphase-python/align_adcs.py" ; 
+  c->alignment_command = "cd /home/nuphase/nuphase-python/;  python align_adcs.py" ; 
 
   c->load_thresholds_from_status_file = 1; 
 
