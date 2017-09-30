@@ -714,6 +714,7 @@ static int setup()
   // In the future, this might be replaced by a less hacky way of doing this 
   if (config.alignment_command) 
   {
+    printf("Running: %s\n", config.alignment_command); 
     int success = system(config.alignment_command); 
     while (!success) 
     {
@@ -848,11 +849,19 @@ int read_config(int first_time)
 
   char * cfgpath = 0;  
   
-  asprintf(&cfgpath, "%s/%s", getenv(CONFIG_DIR_ENV), CONFIG_DIR_ACQ_NAME); 
 
   pthread_mutex_lock(&config_lock); 
 
   if (first_time) nuphase_acq_config_init(&config); 
+
+  if (!nuphase_get_cfg_file(&cfgpath, NUPHASE_ACQ))
+  {
+    printf("Using config file: %s\n", cfgpath); 
+    nuphase_acq_config_read(cfgpath, &config); 
+  }
+  
+
+
 
   nuphase_acq_config_read( cfgpath, &config); 
   pthread_mutex_unlock(&config_lock); 
