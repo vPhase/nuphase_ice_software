@@ -591,7 +591,7 @@ void * write_thread(void *v)
         status_file_size = 0; 
       }
 
-      memcpy(&last_status, &mon->status, sizeof(last_status)); 
+      memcpy(last_status, &mon->status, sizeof(*last_status)); 
 
       //update the mmaped file if necessary 
       if ( saved_status == last_status) msync(saved_status, sizeof(nuphase_status_t),MS_ASYNC); 
@@ -744,7 +744,7 @@ static int setup()
   if (config.load_thresholds_from_status_file) 
   {
 
-    status_save_fd = open(config.status_save_file, O_RDWR,0); 
+    status_save_fd = open(config.status_save_file, O_CREAT | O_RDWR,00755); 
 
     if (status_save_fd == -1) 
     {
