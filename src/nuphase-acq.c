@@ -603,8 +603,8 @@ void * write_thread(void *v)
       status_file_size++; 
     }
     
-    //had data, so sleep just a little 
-    usleep(20000);  //20 ms 
+    //had data, so sleep just a little (unless occupancy is too high) 
+    if (nuphase_buf_occupancy(acq_buffer) < config.buffer_capacity/2)  usleep(30000);  //20 ms 
   }
 
   if (last_status != saved_status)  free(last_status); 
@@ -800,12 +800,24 @@ static int setup()
   acq_buffer = nuphase_buf_init( config.buffer_capacity, sizeof(acq_buffer_t)); 
   mon_buffer = nuphase_buf_init( config.buffer_capacity, sizeof(monitor_buffer_t)); 
 
+  nuphase_set_poll_interval(device, 1000); 
 
   // set up the threads 
+ 
   pthread_create(&the_mon_thread, 0, monitor_thread, 0); 
   pthread_create(&the_acq_thread, 0, acq_thread, 0); 
   pthread_create(&the_wri_thread, 0, write_thread, 0); 
   
+
+  //increase priority of acquistion thread
+  if (config.realtime_priority > 0) 
+  {
+    struct sched_param sp;
+    sp.sched_priority = config.realtime_priority; 
+    pthread_setschedparam(the_acq_thread, SCHED_FIFO, &sp); 
+  }
+
+
   return 0;
 }
 
