@@ -296,6 +296,7 @@ void nuphase_acq_config_init ( nuphase_acq_cfg_t * c)
   c->events_per_file = 1000; 
   c->status_per_file = 200; 
   c->n_fast_scaler_avg = 20; 
+  c->realtime_priority = 20; 
 }
 
 int nuphase_acq_config_read(const char * fi, nuphase_acq_cfg_t * c) 
@@ -337,6 +338,7 @@ int nuphase_acq_config_read(const char * fi, nuphase_acq_cfg_t * c)
   config_lookup_float(&cfg,"control.fast_scaler_weight",&c->fast_scaler_weight); 
   config_lookup_float(&cfg,"control.slow_scaler_weight",&c->slow_scaler_weight); 
   config_lookup_int(&cfg,"control.n_fast_scaler_avg",&c->n_fast_scaler_avg); 
+  config_lookup_int(&cfg,"realtime_priority",&c->realtime_priority); 
 
 
   const char * status_save = 0; 
@@ -556,6 +558,9 @@ int nuphase_acq_config_write(const char * fi, const nuphase_acq_cfg_t * c)
 
   fprintf(f,"  //statuses per output file\n"); 
   fprintf(f,"  status_per_file = %d;\n\n", c->status_per_file); 
+
+  fprintf(f,"  //realtime priority setting. If 0, will use non-realtime priority. Otherwise, SCHED_FIFO is used with the given priority\n"); 
+  fprintf(f,"  realtime_priority = %d;\n\n", c->realtime_priority); 
 
   fprintf(f,"};\n\n"); 
 

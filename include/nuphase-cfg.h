@@ -113,6 +113,8 @@ typedef struct nuphase_acq_cfg
 
   int n_fast_scaler_avg; 
 
+  int realtime_priority; 
+
 } nuphase_acq_cfg_t; 
 
 
