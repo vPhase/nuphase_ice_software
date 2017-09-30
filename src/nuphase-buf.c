@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <string.h>
+#include <unistd.h> 
 #include "nuphase-buf.h"
 
 
@@ -74,7 +75,7 @@ void* nuphase_buf_getmem(nuphase_buf_t *b )
       fprintf(stderr,"WARNING: Buffer %zd is full!\n", b->index); 
       warned++; 
     }
-    sched_yield(); 
+    usleep(500); //sleep for 500 us to give the other thread a chance; 
   }
 
   return b->mem  + b->memb_size * (b->produced_count % b->capacity); 
