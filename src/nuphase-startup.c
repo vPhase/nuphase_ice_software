@@ -122,8 +122,9 @@ int main (int nargs, char ** args)
   //turn on the frontends? 
   nuphase_set_asps_power_state(ASPS_ALL, cfg.asps_method); 
 
-  //turn on the master 
-  nuphase_set_gpio_power_state( NP_FPGA_POWER_MASTER, NP_FPGA_POWER_MASTER); 
+  //turn on the master and spi
+  nuphase_set_gpio_power_state( GPIO_FPGA_ALL, GPIO_FPGA_ALL); 
+
 
   //turn on the downhole??? 
   // (not yet) 
@@ -138,7 +139,6 @@ int main (int nargs, char ** args)
   if (out) 
   {
     nuphase_hk_gzwrite(out, &hk); 
-    gzclose(out); 
   }
 
 
@@ -146,10 +146,18 @@ int main (int nargs, char ** args)
   {
     char cmd[1024]; 
     sprintf(cmd,"%s %g %g", cfg.set_attenuation_cmd, cfg.desired_rms_master, cfg.desired_rms_slave); 
+    printf("Waiting for everything to be on\n"); 
+    sleep(30); 
     printf("Running: %s\n", cmd); 
     system(cmd); 
   }
 
+  if (out) //take another reading here 
+  {
+    nuphase_hk(&hk, cfg.asps_method); 
+    nuphase_hk_gzwrite(out, &hk); 
+    gzclose(out); 
+  }
 
 
   return 0; 
