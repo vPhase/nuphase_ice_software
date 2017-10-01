@@ -53,6 +53,7 @@ typedef struct pid_state
   double k_i; 
   double k_d; 
   int nsum; 
+  double error[NP_NUM_BEAMS] ; 
   double sum_error[NP_NUM_BEAMS];
   double last_measured[NP_NUM_BEAMS];
 } pid_state_t; 
@@ -66,7 +67,21 @@ static void pid_state_init (pid_state_t * c, double p, double i, double d)
   c->nsum =0;
   memset(c->sum_error,0, sizeof(c->sum_error)); 
   memset(c->last_measured,0, sizeof(c->last_measured)); 
+  memset(c->error,0, sizeof(c->error)); 
 }
+
+static void pid_state_print(FILE * f, const pid_state_t * pid) 
+{
+
+  fprintf(f,"===PID STATE (k_p=%g, k_i=%g, k_d=%g, n: %d)) \n", pid->k_p, pid->k_i, pid->k_d, pid->nsum); 
+  int ibeam; 
+  for (ibeam = 0; ibeam < NP_NUM_BEAMS; ibeam++)
+  {
+    fprintf(f,"   Beam %d :: error: %g ::  sum_error: %g ::  last_measured: %g\n",ibeam , pid->error[ibeam], pid->sum_error[ibeam], pid->last_measured[ibeam] );  
+  }
+
+}
+
 
 /* This is what is stored within the acquisition buffer 
  *
@@ -374,6 +389,7 @@ void * monitor_thread(void *v)
         double measured_fast = fs_avg_get(ibeam) / NP_SCALER_TIME(SCALER_FAST); 
         double measured =  (config.slow_scaler_weight * measured_slow + config.fast_scaler_weight * measured_fast) / (config.slow_scaler_weight + config.fast_scaler_weight); 
         double e =  measured - config.scaler_goal[ibeam]; 
+        control.error[ibeam] = e; 
         double de = 0;
 
         // only compute difference after first iteration
@@ -384,7 +400,7 @@ void * monitor_thread(void *v)
 
         control.sum_error[ibeam] += e; 
         control.nsum++; 
-        double ie = control.sum_error[ibeam] / control.nsum; 
+        double ie = control.sum_error[ibeam]; 
 
         control.last_measured[ibeam] = measured; 
 
@@ -484,6 +500,9 @@ void * write_thread(void *v)
 
   nuphase_status_t * last_status = (saved_status && saved_status != MAP_FAILED)  ? saved_status : malloc(sizeof(nuphase_status_t)); 
 
+  pid_state_t last_pid; 
+  pid_state_init(&last_pid,-1,-1,-1); 
+
   nuphase_read_status(device, last_status,MASTER); 
 
   
@@ -527,6 +546,7 @@ void * write_thread(void *v)
       printf("  write buffer occupancy: %u \n", occupancy); 
       fs_avg_print(stdout); 
       nuphase_status_print(stdout, last_status); 
+      pid_state_print(stdout, &last_pid); 
       last_print_out = now; 
       num_events = 0;
     }
@@ -592,6 +612,7 @@ void * write_thread(void *v)
       }
 
       memcpy(last_status, &mon->status, sizeof(*last_status)); 
+      memcpy(&last_pid, &mon->control, sizeof(last_pid)); 
 
       //update the mmaped file if necessary 
       if ( saved_status == last_status) msync(saved_status, sizeof(nuphase_status_t),MS_ASYNC); 
