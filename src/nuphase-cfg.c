@@ -259,6 +259,7 @@ void nuphase_acq_config_init ( nuphase_acq_cfg_t * c)
   c->monitor_interval = 1.0; 
   c->sw_trigger_interval = 1; 
   c->print_interval = 5; 
+  c->poll_usecs = 500; 
 
   c->run_length = 7200; 
   c->spi_clock = 20; 
@@ -339,6 +340,9 @@ int nuphase_acq_config_read(const char * fi, nuphase_acq_cfg_t * c)
   config_lookup_float(&cfg,"control.slow_scaler_weight",&c->slow_scaler_weight); 
   config_lookup_int(&cfg,"control.n_fast_scaler_avg",&c->n_fast_scaler_avg); 
   config_lookup_int(&cfg,"realtime_priority",&c->realtime_priority); 
+  config_lookup_int(&cfg,"poll_usecs",&tmp); 
+  c->poll_usecs = tmp; 
+
 
 
   const char * status_save = 0; 
@@ -561,6 +565,9 @@ int nuphase_acq_config_write(const char * fi, const nuphase_acq_cfg_t * c)
 
   fprintf(f,"  //realtime priority setting. If 0, will use non-realtime priority. Otherwise, SCHED_FIFO is used with the given priority\n"); 
   fprintf(f,"  realtime_priority = %d;\n\n", c->realtime_priority); 
+
+  fprintf(f,"  //Interval between polling SPI link for data. 0 to just sched_yield\n"); 
+  fprintf(f,"  poll_usecs = %u;\n\n", c->poll_usecs); 
 
   fprintf(f,"};\n\n"); 
 

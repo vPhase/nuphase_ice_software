@@ -115,6 +115,8 @@ typedef struct nuphase_acq_cfg
 
   int realtime_priority; 
 
+  uint16_t poll_usecs; 
+
 } nuphase_acq_cfg_t; 
 
 

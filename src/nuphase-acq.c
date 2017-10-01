@@ -692,6 +692,8 @@ static int configure_device()
   nuphase_set_trigger_mask(device, config.trigger_mask); 
   nuphase_set_channel_mask(device, config.channel_mask); 
 
+  nuphase_set_poll_interval(device, config.poll_usecs); 
+
 
  
   return 0; 
@@ -822,7 +824,6 @@ static int setup()
   acq_buffer = nuphase_buf_init( config.buffer_capacity, sizeof(acq_buffer_t)); 
   mon_buffer = nuphase_buf_init( config.buffer_capacity, sizeof(monitor_buffer_t)); 
 
-  nuphase_set_poll_interval(device, 1000); 
 
   // set up the threads 
  
