@@ -88,16 +88,16 @@ static const char * mk_name(time_t t)
   int ok = 0; 
   ok += mkdir_if_needed(cfg.out_dir); 
 
-  sprintf(buf,"%s/hk", cfg.out_dir); 
+  sprintf(buf,"%s", cfg.out_dir); 
   ok += mkdir_if_needed(buf); 
 
-  sprintf(buf,"%s/hk/%04d/", cfg.out_dir, 1900 + tim->tm_year); 
+  sprintf(buf,"%s/%04d", cfg.out_dir, 1900 + tim->tm_year); 
   ok += mkdir_if_needed(buf); 
 
-  sprintf(buf,"%s/hk/%04d/%02d/", cfg.out_dir, 1900 + tim->tm_year, tim->tm_mon + 1); 
+  sprintf(buf,"%s/%04d/%02d", cfg.out_dir, 1900 + tim->tm_year, tim->tm_mon + 1); 
   ok += mkdir_if_needed(buf); 
   
-  sprintf(buf,"%s/hk/%04d/%02d/%02d", cfg.out_dir, 1900 + tim->tm_year, tim->tm_mon + 1, tim->tm_mday); 
+  sprintf(buf,"%s/%04d/%02d/%02d", cfg.out_dir, 1900 + tim->tm_year, tim->tm_mon + 1, tim->tm_mday); 
   ok += mkdir_if_needed(buf); 
 
   if (!ok) 
