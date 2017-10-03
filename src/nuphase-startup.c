@@ -40,7 +40,7 @@ int main (int nargs, char ** args)
   nuphase_set_gpio_power_state(0, GPIO_FPGA_ALL); 
 
   //now we can turn on the FPGA's via the ASPS so we have access to their temperature sensors
-  nuphase_set_asps_power_state ( ASPS_MINIMAL|ASPS_FPGAS, cfg.asps_method); 
+  nuphase_set_asps_power_state ( ASPS_ALL, cfg.asps_method); 
 
   //make the output directory
   gzFile out = 0; 
@@ -67,9 +67,10 @@ int main (int nargs, char ** args)
   int master_ok = 0; 
   int slave_ok = 0; 
   // now loop until the temperature is warm enough 
-  while (!master_ok || !slave_ok) 
+  while (master_ok < cfg.nchecks || slave_ok < cfg.nchecks) 
   {
 
+    int short_circuit = 0;
     //get the hk info 
     nuphase_hk(&hk, cfg.asps_method); 
     nuphase_hk_print(stdout,&hk); 
@@ -81,19 +82,36 @@ int main (int nargs, char ** args)
 
     if (hk.temp_master > cfg.min_temperature)
     {
-      printf("Master OK\n"); 
-      master_ok =1; 
+
+      master_ok++; 
+      printf("Master OK %d\n", master_ok); 
+      short_circuit=1;
+
+      //safe to turn it on
+      if (master_ok >= cfg.nchecks && slave_ok < cfg.nchecks) //only turn on if slave not already on
+      {
+        printf("Turning on Master\n"); 
+        nuphase_set_gpio_power_state( NP_FPGA_POWER_MASTER, NP_FPGA_POWER_MASTER); 
+        sleep(1); 
+      }
     }
 
     if (hk.temp_slave > cfg.min_temperature)
     {
-      printf("Slave OK, turning on\n"); 
-      slave_ok =1; 
-      nuphase_set_gpio_power_state( NP_FPGA_POWER_SLAVE, NP_FPGA_POWER_SLAVE); 
-      sleep(1); 
+
+      slave_ok++; 
+      printf("Slave OK %d\n", slave_ok); 
+      short_circuit=1;
+
+      if (slave_ok >= cfg.nchecks && master_ok < cfg.nchecks) //only turn on if master not already on
+      {
+        printf("Turning on slave\n"); 
+        nuphase_set_gpio_power_state( NP_FPGA_POWER_SLAVE, NP_FPGA_POWER_SLAVE); 
+        sleep(1); 
+      }
     }
 
-    if (master_ok && slave_ok) break; 
+    if (short_circuit) continue; 
 
 
     //make sure that the asps heater is on 
@@ -119,8 +137,6 @@ int main (int nargs, char ** args)
   usleep(100000); 
 
   printf("Turning everything on\n"); 
-  //turn on the frontends? 
-  nuphase_set_asps_power_state(ASPS_ALL, cfg.asps_method); 
 
   //turn on the master and spi
   nuphase_set_gpio_power_state( GPIO_FPGA_ALL, GPIO_FPGA_ALL); 

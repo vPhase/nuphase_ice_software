@@ -27,6 +27,7 @@ void nuphase_start_config_init(nuphase_start_cfg_t * c)
   c->desired_rms_master = 4.2; 
   c->desired_rms_slave = 7.0; 
   c->out_dir = "/data/startup/"; 
+  c->nchecks = 3; 
 }
 
 static void lookup_asps_method(const config_t * cfg, nuphase_asps_method_t * method, const char * key)
@@ -54,6 +55,7 @@ int nuphase_start_config_read(const char * file, nuphase_start_cfg_t * c)
      return 1; 
   }
   config_lookup_int(&cfg,"min_temperature", &c->min_temperature);
+  config_lookup_int(&cfg,"nchecks", &c->nchecks);
   config_lookup_int(&cfg,"heater_current", &c->heater_current);
   config_lookup_int(&cfg,"poll_interval", &c->poll_interval);
   config_lookup_float(&cfg,"desired_rms_master", &c->desired_rms_master);
@@ -101,7 +103,8 @@ int nuphase_start_config_write(const char * file, const nuphase_start_cfg_t * c)
   fprintf(f,"desired_rms_slave = %f;\n\n", c->desired_rms_slave); 
   fprintf(f, "//output directory \n"); 
   fprintf(f, "out_dir=\"%s\";\n\n", c->out_dir); 
- 
+  fprintf(f, "//number of checks for each temperature\n"); 
+  fprintf(f, "nchecks=%d;\n\n", c->nchecks); 
   fclose(f); 
 
   return 0; 
