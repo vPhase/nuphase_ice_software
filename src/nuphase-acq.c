@@ -31,6 +31,7 @@
 
 #include "nuphase-common.h"
 #include "nuphase-cfg.h"
+#include "nuphasehk.h" 
 #include "nuphase-buf.h" 
 #include "nuphasedaq.h"
 #include <pthread.h> 
@@ -743,9 +744,7 @@ static int setup()
     {
       fprintf(stderr,"Alignment not successful. Trying a reset.\n"); 
       //try to do a restart and try again
-      device = nuphase_open(config.spi_devices[0], config.spi_devices[1],0,0); 
-      nuphase_reset(device,NP_RESET_GLOBAL); 
-      nuphase_close(device); 
+      nuphase_reboot_fpga_power(1,0,20); 
       success = system(config.alignment_command); 
     }
   }
