@@ -132,8 +132,15 @@ int nuphase_acq_config_write(const char * file, const nuphase_acq_cfg_t * );
 
 typedef struct nuphase_copy_cfg
 {
-  //TODO . Have to figure out if we'll do it this way or the other way around
   const char * remote_hostname; 
+  const char * remote_path; 
+  const char * remote_user; 
+  const char * local_path; 
+  int free_space_delete_threshold; //MB 
+  int delete_files_older_than;  //days
+  int wakeup_interval; //seconds
+  int dummy_mode; // don't actually delete, just print files 
+
 } nuphase_copy_cfg_t; 
 
 

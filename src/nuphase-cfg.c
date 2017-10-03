@@ -189,7 +189,14 @@ int nuphase_hk_config_write(const char * file, const nuphase_hk_cfg_t * c)
 
 void nuphase_copy_config_init(nuphase_copy_cfg_t * c) 
 {
+  c->remote_user = "radio" ;
   c->remote_hostname = "radproc"; 
+  c->local_path = "/data" ;
+  c->remote_path = "/data/nuphase" ;
+  c->free_space_delete_threshold = 12000; 
+  c->delete_files_older_than = 7;  // ? hopefully this is enough! 
+  c->wakeup_interval = 600; // every 10 mins
+  c->dummy_mode = 0; 
 }
 
 
@@ -207,7 +214,33 @@ int nuphase_copy_config_read(const char * file, nuphase_copy_cfg_t * c)
     c->remote_hostname = strdup(remote_hostname_str); //memory leak, but not easy to do anything else here. 
   } 
 
+  const char * remote_path_str; 
+  if (config_lookup_string(&cfg,"remote_path", &remote_path_str))
+  {
+    c->remote_path = strdup(remote_path_str); //memory leak, but not easy to do anything else here. 
+  } 
+
+  const char * remote_user_str; 
+  if (config_lookup_string(&cfg,"remote_user", &remote_user_str))
+  {
+    c->remote_user = strdup(remote_user_str); //memory leak, but not easy to do anything else here. 
+  } 
+
+  const char * local_path_str; 
+  if (config_lookup_string(&cfg,"local_path", &local_path_str))
+  {
+    c->local_path = strdup(local_path_str); //memory leak, but not easy to do anything else here. 
+  } 
+
+  config_lookup_int(&cfg,"free_space_delete_threshold",&c->free_space_delete_threshold); 
+  config_lookup_int(&cfg,"delete_files_older_than",&c->delete_files_older_than); 
+  config_lookup_int(&cfg,"wakeup_interval",&c->wakeup_interval); 
+  config_lookup_int(&cfg,"dummy_mode",&c->dummy_mode); 
+
+
   config_destroy(&cfg); 
+
+
   return 0; 
 }
 
@@ -216,7 +249,22 @@ int nuphase_copy_config_write(const char * file, const nuphase_copy_cfg_t * c)
   FILE * f = fopen(file,"w"); 
   if (!f) return 1; 
   fprintf(f,"//Configuration file for nuphase-copy\n\n"); 
-  fprintf(f,"remote_hostname=\"%s\";\n", c->remote_hostname); 
+  fprintf(f,"//The host to copy data to\n"); 
+  fprintf(f,"remote_hostname = \"%s\";\n\n", c->remote_hostname); 
+  fprintf(f,"//The remote path to copy data to\n"); 
+  fprintf(f,"remote_path = \"%s\";\n\n", c->remote_path); 
+  fprintf(f,"//The remote user to copy data as (if you didn't set up ssh keys, this won't work so well)\n"); 
+  fprintf(f,"remote_hostname = \"%s\";\n\n", c->remote_user); 
+  fprintf(f,"//The local path to copy data from (note that the CONTENTS of this directory are copied, e.g. an extra / is added to the rsync source)\n"); 
+  fprintf(f,"local_path = \"%s\";\n\n", c->local_path); 
+  fprintf(f,"//Only attempt to automatically delete old files when free space is below this threshold (in MB)\n"); 
+  fprintf(f,"free_space_delete_threshold = %d;\n\n", c->free_space_delete_threshold); 
+  fprintf(f,"//Delete files from local path with modifications times GREATER than this number of days (i.e. if 7, will delete files 8 days and older)\n"); 
+  fprintf(f,"delete_files_older_than = %d;\n\n", c->delete_files_older_than); 
+  fprintf(f,"//This controls how long the process sleeps between copies / deletes\n"); 
+  fprintf(f,"wakeup_interval = %d;\n\n", c->wakeup_interval); 
+  fprintf(f,"//If non-zero, won't actually delete any files\n"); 
+  fprintf(f,"dummy_mode = %d;\n\n", c->dummy_mode); 
   fclose(f); 
 
   return 0; 
