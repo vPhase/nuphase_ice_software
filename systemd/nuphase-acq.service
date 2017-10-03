@@ -6,3 +6,4 @@ Wants=nuphase-copy.service
 EnvironmentFile=/etc/nuphase.cfg
 Restart=always 
 ExecStart=$NUPHASE_PATH/nuphase-acq 
+ExecReload=/bin/kill -USR1 $MAINPID

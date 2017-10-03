@@ -2,7 +2,7 @@
 # before continuiong 
 
 [Unit] 
-Description=Wait until it is arm enough to turn on FPGA
+Description=Wait until it is warm enough to turn on FPGA
 Before=nuphase-acq.service nuphase-hk.service nuphase-copy.service 
 
 
