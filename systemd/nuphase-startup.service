@@ -1,9 +1,9 @@
-# oneshot starutp service that waits for the temperature to be warm enough
-# before continuiong 
+# oneshot startup service that waits for the temperature to be warm enough
+# before continuing 
 
 [Unit] 
 Description=Wait until it is warm enough to turn on FPGA
-Before=nuphase-acq.service nuphase-hk.service nuphase-copy.service 
+Before=nuphase-acq.service nuphase-hk.service
 
 
 [Service] 
@@ -11,3 +11,6 @@ EnvironmentFile=/etc/nuphase.cfg
 Type=oneshot
 RemainAfterExit=yes
 ExecStart=$NUPHASE_PATH/nuphase-startup
+
+[Install] 
+WantedBy=nuphase.target 
