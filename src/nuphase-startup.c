@@ -16,23 +16,55 @@
 #include "nuphase-common.h" 
 #include <stdio.h> 
 #include <string.h> 
+#include <signal.h>
+
+
+static nuphase_start_cfg_t cfg; 
+static int read_config()
+{
+  char * config_file; 
+  if (!nuphase_get_cfg_file(&config_file, NUPHASE_STARTUP))
+  {
+    printf("Using config file: %s\n", config_file); 
+    nuphase_start_config_read(config_file, &cfg); 
+    free(config_file);
+  }
+
+  return 0; 
+}
+
+
+static void signal_handler(int signal, siginfo_t * sig, void * v) 
+{
+  switch (signal)
+  {
+    case SIGUSR1: 
+      read_config(); 
+      break; 
+    default: 
+      fprintf(stderr,"Caught signal %d\n", signal); 
+  }
+}
 
 
 
 int main (int nargs, char ** args) 
 {
 
+  //set up signal handlers 
+  sigset_t empty;
+  sigemptyset(&empty); 
+  struct sigaction sa; 
+  sa.sa_mask = empty; 
+  sa.sa_flags = 0; 
+  sa.sa_sigaction = signal_handler; 
+  sigaction(SIGUSR1, &sa,0); 
+
+
+
   //read the config file
-  nuphase_start_cfg_t cfg; 
   nuphase_start_config_init(&cfg); 
-
-  char * config_file = 0; 
-
-  if (!nuphase_get_cfg_file(&config_file, NUPHASE_STARTUP))
-  {
-    printf("Using config file: %s\n", config_file); 
-    nuphase_start_config_read(config_file, &cfg); 
-  }
+  read_config(); 
   
 
 
@@ -80,7 +112,7 @@ int main (int nargs, char ** args)
     }
 
 
-    if (hk.temp_master > cfg.min_temperature)
+    if (hk.temp_master >= cfg.min_temperature && master_ok < cfg.nchecks)
     {
 
       master_ok++; 
@@ -90,13 +122,13 @@ int main (int nargs, char ** args)
       //safe to turn it on
       if (master_ok >= cfg.nchecks && slave_ok < cfg.nchecks) //only turn on if slave not already on
       {
-        printf("Turning on Master\n"); 
-        nuphase_set_gpio_power_state( NP_FPGA_POWER_MASTER, NP_FPGA_POWER_MASTER); 
+        printf("Turning on Master (and turning off aux heater) \n"); 
+        nuphase_set_gpio_power_state( NP_FPGA_POWER_MASTER, NP_FPGA_POWER_MASTER | NP_AUX_HEATER); 
         sleep(1); 
       }
     }
 
-    if (hk.temp_slave > cfg.min_temperature)
+    if (hk.temp_slave >= cfg.min_temperature && slave_ok < cfg.nchecks)
     {
 
       slave_ok++; 
@@ -120,8 +152,8 @@ int main (int nargs, char ** args)
         nuphase_set_asps_heater_current(cfg.heater_current, cfg.asps_method); 
     }
 
-    //make sure that the aux heater is on
-    nuphase_set_gpio_power_state(NP_AUX_HEATER, NP_AUX_HEATER); 
+    //make sure that the aux heater is on if the master is not 
+    nuphase_set_gpio_power_state(master_ok >= cfg.nchecks ? 0 : NP_AUX_HEATER, NP_AUX_HEATER); 
  
     sleep(cfg.poll_interval); 
   } 
