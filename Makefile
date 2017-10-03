@@ -28,7 +28,9 @@ BINDIR=bin
 .PHONY: clean install all doc default-configs
 
 OBJS:= $(addprefix $(BUILDDIR)/, nuphase-buf.o nuphase-common.o nuphase-cfg.o )
-PROGRAMS := $(addprefix $(BINDIR)/, nuphase-acq nuphase-startup nuphase-hk nuphase-copy nuphase-make-default-config nuphase-check-config )
+PROGRAMS := $(addprefix $(BINDIR)/, nuphase-acq nuphase-startup nuphase-hk nuphase-copy \
+																		nuphase-make-default-config nuphase-check-config  nuphase-current-hk\
+																		nuphase-set-saved-thresholds)
 INCLUDES := $(addprefix $(INCLUDEDIR)/, $(shell ls $(INCLUDEDIR)))
 
 all: $(PROGRAMS) 
