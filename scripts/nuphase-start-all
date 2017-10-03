@@ -1,0 +1,4 @@
+#! /bin/sh 
+
+echo Starting all nuphase daemons 
+systemctl isolate nuphase.target
