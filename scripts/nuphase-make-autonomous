@@ -1,6 +1,6 @@
 #! /bin/sh 
 
-echo Setting up computer in autonomous mode. Will start nuphase startup on boot. To undo, run nuphase-make-autonomous 
+echo Setting up computer in autonomous mode. Will start nuphase startup on boot. To undo, run nuphase-make-interactive 
 
-systemctl make-default nuphase.target 
+systemctl set-default nuphase.target 
 

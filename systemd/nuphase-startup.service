@@ -3,7 +3,10 @@
 
 [Unit] 
 Description=Wait until it is warm enough to turn on FPGA
-Before=nuphase-acq.service nuphase-hk.service
+Before=nuphase-acq.service nuphase-hk.service nuphase-copy.service 
+Wants=dev-ttyUSB0.device
+After=dev-ttyUSB0.device
+
 
 
 [Service] 

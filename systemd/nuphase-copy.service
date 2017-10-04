@@ -1,5 +1,6 @@
 [Unit]
 Description=Copy files and delete old ones 
+Requires=nuphase-startup.service
 
 [Service] 
 EnvironmentFile=/etc/nuphase.cfg 
