@@ -4,7 +4,7 @@
 
 ###################### Things you may need to change#################
 # Location of libnuphase
-LIBNUPHASE_DIR=..
+LIBNUPHASE_DIR=../libnuphase
 
 #installation prefix for programs 
 PREFIX=/nuphase
@@ -17,8 +17,8 @@ NUPHASE_CONFIG_DIR=${PREFIX}/cfg
 ####################################################################
 
 
-CFLAGS +=-g -O2 -Iinclude -Wall -I$(LIBNUPHASE_DIR)/libnuphase -D_GNU_SOURCE
-LDFLAGS+=-L$(LIBNUPHASE_DIR)/libnuphase -lnuphase -lnuphasedaq  -lz -lpthread -lconfig -lrt
+CFLAGS +=-g -O2 -Iinclude -Wall -I$(LIBNUPHASE_DIR) -D_GNU_SOURCE
+LDFLAGS+=-L$(LIBNUPHASE_DIR) -lnuphase -lnuphasedaq  -lz -lpthread -lconfig -lrt
 
 CC=gcc 
 BUILDDIR=build
