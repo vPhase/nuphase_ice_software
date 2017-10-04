@@ -210,6 +210,7 @@ int nuphase_copy_config_read(const char * file, nuphase_copy_cfg_t * c)
   config_init(&cfg); 
   config_set_auto_convert(&cfg,CONFIG_TRUE); 
 
+  config_read_file(&cfg,file); 
  
   const char * remote_hostname_str; 
   if (config_lookup_string(&cfg,"remote_hostname", &remote_hostname_str))
@@ -257,7 +258,7 @@ int nuphase_copy_config_write(const char * file, const nuphase_copy_cfg_t * c)
   fprintf(f,"//The remote path to copy data to\n"); 
   fprintf(f,"remote_path = \"%s\";\n\n", c->remote_path); 
   fprintf(f,"//The remote user to copy data as (if you didn't set up ssh keys, this won't work so well)\n"); 
-  fprintf(f,"remote_hostname = \"%s\";\n\n", c->remote_user); 
+  fprintf(f,"remote_user = \"%s\";\n\n", c->remote_user); 
   fprintf(f,"//The local path to copy data from (note that the CONTENTS of this directory are copied, e.g. an extra / is added to the rsync source)\n"); 
   fprintf(f,"local_path = \"%s\";\n\n", c->local_path); 
   fprintf(f,"//Only attempt to automatically delete old files when free space is below this threshold (in MB)\n"); 

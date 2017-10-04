@@ -36,6 +36,7 @@ static int read_config()
   char * cfgfile; 
   if (!nuphase_get_cfg_file(&cfgfile, NUPHASE_COPY))
   {
+    printf("Reading %s\n", cfgfile); 
     nuphase_copy_config_read(cfgfile, &cfg); 
     free(cfgfile);
   }
@@ -92,7 +93,8 @@ int main(int nargs, char ** arsg)
       //and disk space below some threshold 
       struct statvfs vfs; 
       statvfs(cfg.local_path, &vfs); 
-      int free_mb = ((vfs.f_bavail << 10)  * vfs.f_bsize) << 10; 
+      int free_mb = ((vfs.f_bavail >> 10)  * vfs.f_bsize) >> 10; 
+      printf("free MB: %d\n", free_mb); 
       if (free_mb < cfg.free_space_delete_threshold) 
       {
         system(delete_command); 
