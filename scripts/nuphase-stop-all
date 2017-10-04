@@ -1,0 +1,4 @@
+#!/bin/sh
+
+# Killing all nuphase daemons 
+systemctl isolate multi-user.service 

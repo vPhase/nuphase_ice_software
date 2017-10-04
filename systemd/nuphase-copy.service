@@ -6,3 +6,6 @@ EnvironmentFile=/etc/nuphase.cfg
 Restart=always 
 ExecStart=$NUPHASE_PATH/nuphase-copy 
 ExecReload=/bin/kill -USR1 $MAINPID
+
+[Install] 
+WantedBy=nuphase.target 

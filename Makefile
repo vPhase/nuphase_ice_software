@@ -73,7 +73,8 @@ install: $(PROGRAMS) $(INCLUDES) etc/nuphase.cfg
 	install etc/nuphase.cfg /etc
 	install -d $(PREFIX)/include
 	install $(INCLUDES) $(PREFIX)/include 
-
+	cp systemd/* /etc/systemd/system/
+	cp scripts/* $(PREFIX)/bin
 
 
 clean: 
