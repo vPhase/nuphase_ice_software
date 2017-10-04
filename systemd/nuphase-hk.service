@@ -6,7 +6,7 @@ Requires=nuphase-startup.service
 [Service] 
 EnvironmentFile=/etc/nuphase.cfg 
 Restart=always 
-ExecStart=/bin/sh -c "${NUPHASE_PATH}/nuphase-hk" 
+ExecStart=/bin/sh -c "exec ${NUPHASE_PATH}/nuphase-hk" 
 ExecReload=/bin/kill -USR1 $MAINPID
 
 [Install] 

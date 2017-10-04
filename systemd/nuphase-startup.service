@@ -13,7 +13,7 @@ After=dev-ttyUSB0.device
 EnvironmentFile=/etc/nuphase.cfg 
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/bin/sh -c "${NUPHASE_PATH}/nuphase-startup"
+ExecStart=/bin/sh -c "exec ${NUPHASE_PATH}/nuphase-startup"
 
 [Install] 
 WantedBy=nuphase.target 
