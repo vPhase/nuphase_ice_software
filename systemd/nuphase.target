@@ -1,6 +1,6 @@
 [Unit]
 Description= NuPhase autonomous software
-Requires = multi-user.target time-sync.target
+Wants = multi-user.target time-sync.target
 After = multi-user.target time-sync.target
 AllowIsolate = yes
 

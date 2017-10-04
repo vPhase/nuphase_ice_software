@@ -75,6 +75,11 @@ install: $(PROGRAMS) $(INCLUDES) etc/nuphase.cfg
 	install $(INCLUDES) $(PREFIX)/include 
 	cp systemd/* /etc/systemd/system/
 	cp scripts/* $(PREFIX)/bin
+	systemctl daemon-reload
+	systemctl enable nuphase-startup
+	systemctl enable nuphase-acq
+	systemctl enable nuphase-hk
+	systemctl enable nuphase-copy
 
 
 clean: 

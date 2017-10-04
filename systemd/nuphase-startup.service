@@ -10,7 +10,7 @@ Before=nuphase-acq.service nuphase-hk.service
 EnvironmentFile=/etc/nuphase.cfg 
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=$NUPHASE_PATH/nuphase-startup
+ExecStart=/bin/sh -c "${NUPHASE_PATH}/nuphase-startup"
 
 [Install] 
 WantedBy=nuphase.target 

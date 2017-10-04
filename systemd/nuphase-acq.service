@@ -2,12 +2,11 @@
 Description=Record NuPhase data
 Wants=nuphase-copy.service 
 Requires=nuphase-startup.service 
-WantedBy=nuphase.target 
 
 [Service] 
 EnvironmentFile=/etc/nuphase.cfg
 Restart=always 
-ExecStart=$NUPHASE_PATH/nuphase-acq 
+ExecStart=/bin/sh -c "${NUPHASE_PATH}/nuphase-acq"
 ExecReload=/bin/kill -USR1 $MAINPID
 
 [Install]
