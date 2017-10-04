@@ -38,7 +38,7 @@ all: $(PROGRAMS)
 etc/nuphase.cfg: 
 	mkdir -p etc 
 	echo NUPHASE_PATH=${PREFIX}/bin > etc/nuphase.cfg 
-	echo NUPHASE_CONFIG_DIR=${NUPHASE_CONFIG_DIR} 
+	echo NUPHASE_CONFIG_DIR=${NUPHASE_CONFIG_DIR}  >> etc/nuphase.cfg 
 
 
 default-configs: $(BINDIR)/nuphase-make-default-config 
