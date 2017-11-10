@@ -112,6 +112,9 @@ typedef struct monitor_buffer
 /* The configuration state */ 
 static nuphase_acq_cfg_t config; 
 
+/** Need this to apply attenuation */
+static nuphase_start_cfg_t start_config; 
+
 /* Mutex protecting the configuration */
 static pthread_mutex_t config_lock; 
 
@@ -746,7 +749,9 @@ static int setup()
       //try to do a restart and try again
       nuphase_reboot_fpga_power(1,0,20); 
       success = system(config.alignment_command); 
+      if (success && !config.apply_attenuations) system(start_config.set_attenuation_cmd); 
     }
+
   }
 
 
@@ -869,22 +874,31 @@ int read_config(int first_time)
 {
 
   char * cfgpath = 0;  
+  char * start_cfgpath = 0;  
   
 
   pthread_mutex_lock(&config_lock); 
 
-  if (first_time) nuphase_acq_config_init(&config); 
+  if (first_time)
+  {
+    nuphase_acq_config_init(&config); 
+    nuphase_start_config_init(&start_config); 
+  }
 
   if (!nuphase_get_cfg_file(&cfgpath, NUPHASE_ACQ))
   {
     printf("Using config file: %s\n", cfgpath); 
-    nuphase_acq_config_read(cfgpath, &config); 
+  }
+
+   if (!nuphase_get_cfg_file(&start_cfgpath, NUPHASE_STARTUP))
+  {
+    printf("Using startup config file: %s\n", start_cfgpath); 
   }
   
 
 
-
   nuphase_acq_config_read( cfgpath, &config); 
+  nuphase_start_config_read(start_cfgpath, &start_config); 
   pthread_mutex_unlock(&config_lock); 
 
   pid_state_init(&control, config.k_p, config.k_i, config.k_d); 
