@@ -10,7 +10,7 @@
 
 int main (int nargs, char ** args) 
 {
-  if (nargs != 2 || nargs != NP_NUM_BEAMS +1) 
+  if (nargs != 2 && nargs != NP_NUM_BEAMS +1) 
   {
     fprintf(stderr,"Usage:\tnuphase-set-saved-thresolds thresh\n\t\tnuphase-set-saved-thresholds thresh0 thresh1 thresh2 thresh3 ... thresh14\n"); 
     return 1; 
@@ -40,5 +40,7 @@ int main (int nargs, char ** args)
   FILE * f = fopen(cfg.status_save_file,"w"); 
   fwrite(&save, sizeof(save),1,f); 
   fclose(f); 
+
+  return 0; 
 }
   
