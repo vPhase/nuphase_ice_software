@@ -356,6 +356,7 @@ void nuphase_acq_config_init ( nuphase_acq_cfg_t * c)
   c->pretrigger = 4; 
   c->slow_scaler_weight = 0.3; 
   c->fast_scaler_weight = 0.7; 
+  c->subtract_gated = 1; 
   c->secs_before_phased_trigger = 20; 
   c->events_per_file = 1000; 
   c->status_per_file = 200; 
@@ -402,6 +403,7 @@ int nuphase_acq_config_read(const char * fi, nuphase_acq_cfg_t * c)
   config_lookup_float(&cfg,"control.fast_scaler_weight",&c->fast_scaler_weight); 
   config_lookup_float(&cfg,"control.slow_scaler_weight",&c->slow_scaler_weight); 
   config_lookup_int(&cfg,"control.n_fast_scaler_avg",&c->n_fast_scaler_avg); 
+  config_lookup_int(&cfg,"control.subtract_gated",&c->subtract_gated); 
   config_lookup_int(&cfg,"realtime_priority",&c->realtime_priority); 
   config_lookup_int(&cfg,"poll_usecs",&tmp); 
   c->poll_usecs = tmp; 
@@ -545,14 +547,18 @@ int nuphase_acq_config_write(const char * fi, const nuphase_acq_cfg_t * c)
   fprintf(f,"   //weight of slow scaler in pid loop\n"); 
   fprintf(f,"   slow_scaler_weight = %g;\n\n", c->slow_scaler_weight); 
 
-  fprintf(f,"  //number of fast scalers to average\n"); 
-  fprintf(f,"  n_fast_scaler_avg = %d;\n\n", c->n_fast_scaler_avg); 
+  fprintf(f,"   //number of fast scalers to average\n"); 
+  fprintf(f,"   n_fast_scaler_avg = %d;\n\n", c->n_fast_scaler_avg); 
 
-  fprintf(f,"  //File to persist the status info (primarily for saving thresholds between restarts)\n") ;
-  fprintf(f,"  status_save_file = \"%s\"\n\n", c->status_save_file); 
+  fprintf(f,"   //Whether or not to subtract off gated scalers\n"); 
+  fprintf(f,"   subtract_gated = %d;\n\n", c->subtract_gated); 
 
-  fprintf(f,"  // load thresholds from status file on start.\n");  
-  fprintf(f,"  load_thresholds_from_status_file=%d\n\n", c->load_thresholds_from_status_file); 
+
+  fprintf(f,"   //File to persist the status info (primarily for saving thresholds between restarts)\n") ;
+  fprintf(f,"   status_save_file = \"%s\"\n\n", c->status_save_file); 
+
+  fprintf(f,"   // load thresholds from status file on start.\n");  
+  fprintf(f,"   load_thresholds_from_status_file=%d\n\n", c->load_thresholds_from_status_file); 
 
 
   fprintf(f,"};\n\n"); 

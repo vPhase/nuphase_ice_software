@@ -370,7 +370,7 @@ void * monitor_thread(void *v)
 
     //////////////////////////////////////////////////////
     //read the status, and react to it 
-    // herein lies the PID check and all those wonderful things
+    // herein lies the PID loop and all those wonderful things
     //////////////////////////////////////////////////////
     if (config.monitor_interval &&  diff_mon > config.monitor_interval)
     {
@@ -392,6 +392,13 @@ void * monitor_thread(void *v)
         double measured_slow = ((double) st->beam_scalers[SCALER_SLOW][ibeam]) / NP_SCALER_TIME(SCALER_SLOW); 
         double measured_fast = fs_avg_get(ibeam) / NP_SCALER_TIME(SCALER_FAST); 
         double measured =  (config.slow_scaler_weight * measured_slow + config.fast_scaler_weight * measured_fast) / (config.slow_scaler_weight + config.fast_scaler_weight); 
+
+        if (config.subtract_gated) 
+        {
+          double measured_gated_slow = ((double) st->beam_scalers[SCALER_SLOW_GATED][ibeam]) / NP_SCALER_TIME(SCALER_SLOW_GATED); 
+          measured -= measured_gated_slow; 
+        }
+
         double e =  measured - config.scaler_goal[ibeam]; 
         control.error[ibeam] = e; 
         double de = 0;
