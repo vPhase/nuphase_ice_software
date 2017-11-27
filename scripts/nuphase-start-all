@@ -1,4 +1,8 @@
 #! /bin/sh 
 
 echo Starting all nuphase daemons 
+echo    This won\'t exit until nuphase-startup is done
+echo    Use journalctl -u nuphase-startup to see output
 systemctl isolate nuphase.target
+echo Done, everything is hopefully running now 
+systemctl status nuphase-startup.target
