@@ -90,6 +90,10 @@ typedef struct nuphase_acq_cfg
   // enable the trigout
   int enable_trigout;
 
+  // disable the trigout on exit (this also means
+  // it's temporarily disabled between runs ) 
+  int disable_trigout_on_exit; 
+
   // Use this to apply the attenuations instead of just
   // using whatever is on the board. 
   int apply_attenuations; 
