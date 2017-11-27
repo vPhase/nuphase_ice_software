@@ -189,13 +189,21 @@ int main (int nargs, char ** args)
     nuphase_hk_gzwrite(out, &hk); 
   }
 
+  int wait_this_long = 30;
+
+  if (strlen(cfg.reconfigure_fpga_cmd))
+  {
+    wait_this_long = 0; //  reconfiguring the fpga's should be enough time for things to be on. 
+    printf("Reconfiguring FGPAs with command: %s\n", cfg.reconfigure_fpga_cmd); 
+    system(cfg.reconfigure_fpga_cmd);
+  }
 
   if (strlen(cfg.set_attenuation_cmd))
   {
     char cmd[1024]; 
     sprintf(cmd,"%s %g %g", cfg.set_attenuation_cmd, cfg.desired_rms_master, cfg.desired_rms_slave); 
     printf("Waiting for everything to be on\n"); 
-    sleep(30); 
+    sleep(wait_this_long); 
     printf("Running: %s\n", cmd); 
     system(cmd); 
   }

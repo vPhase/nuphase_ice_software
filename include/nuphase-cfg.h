@@ -160,6 +160,7 @@ typedef struct nuphase_start_cfg
   int poll_interval; 
   int nchecks;
   const char * set_attenuation_cmd; 
+  const char * reconfigure_fpga_cmd; 
   const char * out_dir; //output directory for hk data 
   double desired_rms_master; 
   double desired_rms_slave; 

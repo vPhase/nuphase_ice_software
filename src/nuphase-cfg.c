@@ -24,6 +24,7 @@ void nuphase_start_config_init(nuphase_start_cfg_t * c)
   c->heater_current = 500; 
   c->poll_interval = 5; 
   c->set_attenuation_cmd = "cd /home/nuphase/nuphase-python; python set_attenuation.py"; 
+  c->reconfigure_fpga_cmd = "cd /home/nuphase/nuphase-python; ./reconfigureFPGA -a 0; sleep 20; ./reconfigureFPGA -a 1; sleep 20;"; 
   c->desired_rms_master = 4.2; 
   c->desired_rms_slave = 7.0; 
   c->out_dir = "/data/startup/"; 
@@ -67,7 +68,14 @@ int nuphase_start_config_read(const char * file, nuphase_start_cfg_t * c)
   if (config_lookup_string(&cfg, "set_attenuation_cmd", &attenuation_cmd))
   {
     c->set_attenuation_cmd = strdup(attenuation_cmd); //memory leak :( 
+
+ 
+  const char * reconfigure_cmd; 
+  if (config_lookup_string(&cfg, "reconfigure_fpga_cmd", &reconfigure_cmd))
+  {
+    c->reconfigure_fpga_cmd = strdup(reconfigure_cmd); //memory leak :( 
   }
+ }
 
   const char * out_dir; 
   if (config_lookup_string(&cfg, "out_dir", &out_dir))
@@ -97,6 +105,8 @@ int nuphase_start_config_write(const char * file, const nuphase_start_cfg_t * c)
   fprintf(f,"poll_interval = %d;\n\n", c->poll_interval); 
   fprintf(f,"// Command to run after turning on boards to tune attenuations \n"); 
   fprintf(f,"set_attenuation_cmd = \"%s\";\n\n", c->set_attenuation_cmd); 
+  fprintf(f,"// Command to run after turning on boards to reconfigure FGPA's\n"); 
+  fprintf(f,"reconfigure_fpga_cmd = \"%s\";\n\n", c->reconfigure_fpga_cmd); 
   fprintf(f,"//rms goal for master \n"); 
   fprintf(f,"desired_rms_master = %f;\n\n", c->desired_rms_master); 
   fprintf(f,"//rms goal for slave \n"); 

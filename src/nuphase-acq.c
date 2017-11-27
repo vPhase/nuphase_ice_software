@@ -737,7 +737,7 @@ static int setup()
   fclose(run_file); 
   rename(tmp_run_file, config.run_file); 
 
-  //run the alignment program, if necessary 
+  //run the reconfiguration / alignment program, if necessary 
   // In the future, this might be replaced by a less hacky way of doing this 
   if (config.alignment_command) 
   {
@@ -748,8 +748,21 @@ static int setup()
       fprintf(stderr,"Alignment not successful. Trying a reset.\n"); 
       //try to do a restart and try again
       nuphase_reboot_fpga_power(1,0,20); 
+
+      if (start_config.reconfigure_fpga_cmd)
+      {
+        printf("Reconfiguring FPGA's"); 
+        system(start_config.reconfigure_fpga_cmd); 
+      }
+
       success = system(config.alignment_command); 
-      if (success && !config.apply_attenuations) system(start_config.set_attenuation_cmd); 
+
+      if (success && !config.apply_attenuations)
+      {
+        char cmd[1024]; 
+        sprintf(cmd,"%s %g %g", start_config.set_attenuation_cmd, start_config.desired_rms_master, start_config.desired_rms_slave); 
+        system(cmd); 
+      }
     }
 
   }
