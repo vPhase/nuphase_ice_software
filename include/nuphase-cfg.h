@@ -109,6 +109,8 @@ typedef struct nuphase_acq_cfg
 
   double fast_scaler_weight; 
 
+  int subtract_gated; 
+
   int secs_before_phased_trigger; 
 
   int events_per_file; 
