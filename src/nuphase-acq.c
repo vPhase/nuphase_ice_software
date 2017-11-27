@@ -856,6 +856,14 @@ int teardown()
 
   //Turn off calpulser 
   nuphase_calpulse(device,0); 
+
+  //optionally, turn off the phased trigger output 
+  nuphase_trigger_output_config_t trigo; 
+  nuphase_get_trigger_output(device,&trigo); 
+  trigo.enable = trigo.enable && !config.disable_trigout_on_exit; 
+  nuphase_configure_trigger_output(device,trigo); 
+
+
   nuphase_close(device); 
 
 
