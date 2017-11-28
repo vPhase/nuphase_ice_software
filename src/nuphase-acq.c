@@ -836,11 +836,11 @@ static int setup()
   //set up the beamforming trigger 
   //Right now, this will just always be on. 
   nuphase_trigger_enable_t slave_enables = nuphase_get_trigger_enables(device,SLAVE); 
-  slave_enables  = slave_enables | NP_TRIGGER_BEAMFORMING;
+  slave_enables.enable_beamforming = 1; 
   nuphase_set_trigger_enables(device, slave_enables, SLAVE); 
 
   nuphase_trigger_enable_t master_enables = nuphase_get_trigger_enables(device,MASTER); 
-  master_enables  = master_enables | NP_TRIGGER_BEAMFORMING; 
+  master_enables.enable_beamforming = 1; 
   nuphase_set_trigger_enables(device, master_enables, MASTER); 
  
 
