@@ -193,7 +193,8 @@ int main (int nargs, char ** args)
 
   if (strlen(cfg.reconfigure_fpga_cmd))
   {
-    wait_this_long = 0; //  reconfiguring the fpga's should be enough time for things to be on. 
+    sleep(wait_this_long); 
+    wait_this_long = 0; 
     printf("Reconfiguring FGPAs with command: %s\n", cfg.reconfigure_fpga_cmd); 
     system(cfg.reconfigure_fpga_cmd);
   }
