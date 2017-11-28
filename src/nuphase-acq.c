@@ -636,7 +636,7 @@ void * write_thread(void *v)
     }
     
     //had data, so sleep just a little (unless occupancy is too high) 
-    if (nuphase_buf_occupancy(acq_buffer) < config.buffer_capacity/2)  usleep(25000);  //25 ms 
+    if (nuphase_buf_occupancy(acq_buffer) < config.buffer_capacity/3)  usleep(25000);  //25 ms 
   }
 
   if (last_status != saved_status)  free(last_status); 
