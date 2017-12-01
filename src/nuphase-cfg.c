@@ -363,6 +363,9 @@ void nuphase_acq_config_init ( nuphase_acq_cfg_t * c)
   c->status_per_file = 200; 
   c->n_fast_scaler_avg = 20; 
   c->realtime_priority = 20; 
+
+  c->copy_paths_to_rundir = "/home/nuphase/output:/proc/loadavg"; 
+  c->copy_configs = 1; 
 }
 
 int nuphase_acq_config_read(const char * fi, nuphase_acq_cfg_t * c) 
@@ -483,11 +486,18 @@ int nuphase_acq_config_read(const char * fi, nuphase_acq_cfg_t * c)
     c->output_directory = strdup(output_directory); 
   }
 
+  const char * copy_paths; 
+  if (config_lookup_string( &cfg, "output.copy_paths_to_rundir", &copy_paths))
+  {
+    c->copy_paths_to_rundir = strdup(copy_paths); 
+  }
+
 
   config_lookup_int(&cfg,"output.print_interval", &c->print_interval); 
   config_lookup_int(&cfg,"output.run_length", &c->run_length); 
   config_lookup_int(&cfg,"output.events_per_file", &c->events_per_file); 
   config_lookup_int(&cfg,"output.status_per_file", &c->status_per_file); 
+  config_lookup_int(&cfg,"output.copy_configs", &c->copy_configs); 
 
 
 
@@ -646,6 +656,12 @@ int nuphase_acq_config_write(const char * fi, const nuphase_acq_cfg_t * c)
 
   fprintf(f,"  //Interval between polling SPI link for data. 0 to just sched_yield\n"); 
   fprintf(f,"  poll_usecs = %u;\n\n", c->poll_usecs); 
+
+  fprintf(f,"  // Colon separated list of paths to copy (recursively) into run dir at start of run\n");
+  fprintf(f,"  copy_paths_to_rundir = \"%s\";\n\n", c->copy_paths_to_rundir); 
+
+  fprintf(f,"  //Whether or not to copy configs into run dir\n"); 
+  fprintf(f,"  copy_configs = %d;\n", c->copy_configs); 
 
   fprintf(f,"};\n\n"); 
 

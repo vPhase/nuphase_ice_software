@@ -124,6 +124,10 @@ typedef struct nuphase_acq_cfg
 
   int realtime_priority; 
 
+  const char * copy_paths_to_rundir; 
+
+  int copy_configs; 
+
   uint16_t poll_usecs; 
 
 
