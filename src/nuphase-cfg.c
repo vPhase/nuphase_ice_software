@@ -24,7 +24,7 @@ void nuphase_start_config_init(nuphase_start_cfg_t * c)
   c->heater_current = 500; 
   c->poll_interval = 5; 
   c->set_attenuation_cmd = "cd /home/nuphase/nuphase-python; python set_attenuation.py"; 
-  c->reconfigure_fpga_cmd = "cd /home/nuphase/nuphase-python; ./reconfigureFPGA -a 0; sleep 20; ./reconfigureFPGA -a 1; sleep 20;"; 
+  c->reconfigure_fpga_cmd = "cd /home/nuphase/nuphase-python; ./reconfigureFPGA -a 1; ./reconfigureFPGA -a 0; "; 
   c->desired_rms_master = 4.2; 
   c->desired_rms_slave = 7.0; 
   c->out_dir = "/data/startup/"; 
@@ -364,7 +364,7 @@ void nuphase_acq_config_init ( nuphase_acq_cfg_t * c)
   c->n_fast_scaler_avg = 20; 
   c->realtime_priority = 20; 
 
-  c->copy_paths_to_rundir = "/home/nuphase/output:/proc/loadavg"; 
+  c->copy_paths_to_rundir = "/home/nuphase/nuphase-python/output:/proc/loadavg"; 
   c->copy_configs = 1; 
 }
 
