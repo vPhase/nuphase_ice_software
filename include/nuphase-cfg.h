@@ -90,6 +90,9 @@ typedef struct nuphase_acq_cfg
   // enable the trigout
   int enable_trigout;
 
+  // enable ext in 
+  int enable_extin; 
+
   // disable the trigout on exit (this also means
   // it's temporarily disabled between runs ) 
   int disable_trigout_on_exit; 
@@ -122,6 +125,7 @@ typedef struct nuphase_acq_cfg
   int realtime_priority; 
 
   uint16_t poll_usecs; 
+
 
 } nuphase_acq_cfg_t; 
 

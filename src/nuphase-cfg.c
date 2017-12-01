@@ -332,6 +332,7 @@ void nuphase_acq_config_init ( nuphase_acq_cfg_t * c)
 
   c->apply_attenuations = 0; 
   c->enable_trigout=1; 
+  c->enable_extin = 0; 
   c->disable_trigout_on_exit = 1; 
 
   //provisional reasonable values 
@@ -439,6 +440,7 @@ int nuphase_acq_config_read(const char * fi, nuphase_acq_cfg_t * c)
   config_lookup_int(&cfg,"device.pretrigger", &c->pretrigger); 
   config_lookup_int(&cfg,"device.calpulser_state", &c->calpulser_state); 
   config_lookup_int(&cfg,"device.enable_trigout", &c->enable_trigout); 
+  config_lookup_int(&cfg,"device.enable_extin", &c->enable_extin); 
   config_lookup_int(&cfg,"device.disable_trigout_on_exit", &c->disable_trigout_on_exit); 
   config_lookup_int(&cfg,"device.spi_clock", &c->spi_clock); 
   config_lookup_int(&cfg,"device.apply_attenuations", &c->apply_attenuations); 
@@ -585,6 +587,9 @@ int nuphase_acq_config_write(const char * fi, const nuphase_acq_cfg_t * c)
 
   fprintf(f,"  // Whether or not to enable the trigger output\n"); 
   fprintf(f,"  enable_trigout = %d;\n\n", c->enable_trigout); 
+
+  fprintf(f,"  // Whether or not to enable external trigger input\n"); 
+  fprintf(f,"  enable_extin = %d;\n\n", c->enable_extin); 
 
   fprintf(f,"  // Whether or not to disable the trigger output on exit\n"); 
   fprintf(f,"  disable_trigout_on_exit = %d;\n\n", c->disable_trigout_on_exit); 

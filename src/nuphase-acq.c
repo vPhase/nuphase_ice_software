@@ -688,6 +688,13 @@ static int configure_device()
   trigo.enable = config.enable_trigout; 
   nuphase_configure_trigger_output(device,trigo); 
 
+  nuphase_ext_input_config_t trigi; 
+
+  nuphase_get_ext_trigger_in(device,&trigi); 
+  trigi.use_as_trigger = config.enable_extin; 
+  nuphase_configure_ext_trigger_in(device,trigi); 
+
+
   //set up the calpulser
   nuphase_calpulse(device,config.calpulser_state); 
 
@@ -948,7 +955,9 @@ int read_config(int first_time)
     rename(tmp_run_file, config.run_file); 
   }
 
+
   free(cfgpath); 
+  free(start_cfgpath); 
 
   return 0;
 }
