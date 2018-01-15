@@ -686,6 +686,7 @@ static int configure_device()
   nuphase_trigger_output_config_t trigo; 
   nuphase_get_trigger_output(device,&trigo); 
   trigo.enable = config.enable_trigout; 
+  trigo.width = config.trigout_width; 
   nuphase_configure_trigger_output(device,trigo); 
 
   //set up the calpulser
