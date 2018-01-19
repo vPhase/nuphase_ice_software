@@ -102,7 +102,7 @@ static const char * mk_name(time_t t)
 
   if (!ok) 
   {
-    sprintf(buf,"%s/%04d/%02d/%02d/%02d%02d%02d.hk.gz", cfg.out_dir, 1900 + tim->tm_year, tim->tm_mon + 1, tim->tm_mday, tim->tm_hour, tim->tm_min, tim->tm_sec); 
+    sprintf(buf,"%s/%04d/%02d/%02d/%02d%02d%02d.hk.gz%s", cfg.out_dir, 1900 + tim->tm_year, tim->tm_mon + 1, tim->tm_mday, tim->tm_hour, tim->tm_min, tim->tm_sec, tmp_suffix); 
     return buf; 
   }
 
@@ -157,6 +157,7 @@ int main(int nargs, char ** args)
 
 
   gzFile outf = 0; 
+  char * outf_name = 0; 
   
 
   while (!stop) 
@@ -167,8 +168,9 @@ int main(int nargs, char ** args)
 
     if (now - last > cfg.max_secs_per_file) 
     {
-      if (outf) gzclose(outf); 
+      if (outf) do_close(outf, outf_name); 
       const char * fname = mk_name(now); 
+      outf_name = strdup(fname); 
       outf = gzopen(fname,"w"); 
       last = now; 
     }
@@ -181,7 +183,7 @@ int main(int nargs, char ** args)
 
 
   close(shared_fd); 
-  gzclose(outf); 
+  do_close(outf, outf_name); 
 
   return 0 ; 
 }

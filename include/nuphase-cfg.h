@@ -93,6 +93,9 @@ typedef struct nuphase_acq_cfg
   // enable ext in 
   int enable_extin; 
 
+  // The width (in 40 ns increments) of the external trigger output
+  int trigout_width; 
+
   // disable the trigout on exit (this also means
   // it's temporarily disabled between runs ) 
   int disable_trigout_on_exit; 
