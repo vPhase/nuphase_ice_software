@@ -2,6 +2,7 @@
 #include <stdio.h> 
 #include <time.h> 
 #include <stdlib.h> 
+#include <string.h> 
 #include <sys/stat.h> 
 
 
@@ -48,6 +49,26 @@ int mkdir_if_needed(const char * path)
 
   return 0; 
 
+}
+
+int do_close(gzFile gzf, char * path) 
+{
+  int ret = gzclose(gzf); 
+
+  int pathlen = strlen(path); 
+
+  //check if we end with a .tmp suffix 
+  //and rename if we do 
+  if (!strcasecmp(path + pathlen-tmp_suffix_len ,tmp_suffix)) 
+  {
+    char * final_path = strdup(path);
+    final_path[pathlen+tmp_suffix_len] = 0; 
+    rename(path,final_path); 
+    free(final_path); 
+  }
+
+  free(path); 
+  return ret; 
 }
 
 

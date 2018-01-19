@@ -490,6 +490,9 @@ static int make_dirs_for_output(const char * prefix)
 }
 
 
+
+
+
 /** Will write output to disk and some status info to screen */ 
 void * write_thread(void *v) 
 {
@@ -505,6 +508,9 @@ void * write_thread(void *v)
   gzFile data_file = 0 ; 
   gzFile header_file = 0 ; 
   gzFile status_file  = 0 ; 
+  char * data_file_name = 0; 
+  char * header_file_name = 0; 
+  char * status_file_name = 0; 
 
   acq_buffer_t *events= 0; 
   monitor_buffer_t *mon= 0;
@@ -567,9 +573,9 @@ void * write_thread(void *v)
     {
       if (die) 
       {
-        if (data_file)  gzclose(data_file); 
-        if (header_file)  gzclose(header_file); 
-        if (status_file)  gzclose(status_file); 
+        if (data_file)  do_close(data_file,data_file_name); 
+        if (header_file)  do_close(header_file, header_file_name); 
+        if (status_file)  do_close(status_file, status_file_name); 
 
         break; 
       }
@@ -591,17 +597,19 @@ void * write_thread(void *v)
 
         if (!data_file || data_file_size >= config.events_per_file)
         {
-          if (data_file) gzclose(data_file); 
-          snprintf(bigbuf,sizeof(bigbuf),"%s/run%d/event/%llu.event.gz", config.output_directory,run_number,  events->events[j].event_number ); 
+          if (data_file) do_close(data_file, data_file_name); 
+          snprintf(bigbuf,sizeof(bigbuf),"%s/run%d/event/%llu.event.gz%s", config.output_directory,run_number,  events->events[j].event_number, tmp_suffix ); 
           data_file = gzopen(bigbuf,"w");  //TODO add error check
+          data_file_name = strdup(bigbuf); 
           data_file_size = 0; 
         }
 
         if (!header_file || header_file_size >= config.events_per_file)
         {
-          if (header_file) gzclose(header_file); 
-          snprintf(bigbuf,sizeof(bigbuf),"%s/run%d/header/%llu.header.gz", config.output_directory,run_number, events->headers[j].event_number ); 
+          if (header_file) do_close(header_file, header_file_name); 
+          snprintf(bigbuf,sizeof(bigbuf),"%s/run%d/header/%llu.header.gz%s", config.output_directory,run_number, events->headers[j].event_number, tmp_suffix ); 
           header_file = gzopen(bigbuf,"w");  //TODO add error check
+          header_file_name = strdup(bigbuf); 
           header_file_size = 0; 
         }
        
@@ -616,9 +624,10 @@ void * write_thread(void *v)
     {
       if (!status_file || status_file_size >= config.status_per_file)
       {
-        if (status_file) gzclose(status_file); 
-        snprintf(bigbuf,sizeof(bigbuf),"%s/run%d/status/%u.status.gz", config.output_directory, run_number,  (unsigned) now); 
+        if (status_file) do_close(status_file, status_file_name); 
+        snprintf(bigbuf,sizeof(bigbuf),"%s/run%d/status/%u.status.gz%s", config.output_directory, run_number,  (unsigned) now, tmp_suffix); 
         status_file = gzopen(bigbuf,"w");  //TODO add error check
+        status_file_name = strdup(bigbuf); 
         status_file_size = 0; 
       }
 

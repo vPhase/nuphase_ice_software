@@ -1,6 +1,7 @@
 #ifndef _NUPHASE_COMMON_H 
 #define _NUPHASE_COMMON_H 
 #include <time.h> 
+#include <zlib.h>
 
 /** Various common things used by multiple programs */ 
 
@@ -46,6 +47,12 @@ int mkdir_if_needed(const char * path);
  */ 
 int mkdirs_for_time(const char * prefix, const char * pattern,  time_t when); 
 
+
+#define tmp_suffix ".tmp" 
+#define tmp_suffix_len  strlen(tmp_suffix) 
+
+/* Closes and, if ends with .tmp suffix, renames */ 
+int do_close(gzFile gzf, char * path); 
 
 
 #endif

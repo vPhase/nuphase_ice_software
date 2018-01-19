@@ -25,7 +25,7 @@ static char * delete_command = 0;
 static void construct_commands() 
 {
   if (copy_command) free(copy_command); 
-  asprintf(&copy_command, "rsync -q -a %s/ %s@%s:%s", cfg.local_path, cfg.remote_user, cfg.remote_hostname, cfg.remote_path); 
+  asprintf(&copy_command, "rsync  --exclude '*%s' -q -a %s/ %s@%s:%s", tmp_suffix, cfg.local_path, cfg.remote_user, cfg.remote_hostname, cfg.remote_path); 
 
   if (delete_command) free(delete_command) ; 
   asprintf(&delete_command,"find %s -mtime +%d %s", cfg.local_path, cfg.delete_files_older_than, cfg.dummy_mode ? "-print" : "-delete"); 
