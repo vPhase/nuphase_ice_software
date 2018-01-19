@@ -1,6 +1,6 @@
 [Unit]
 Description=Record NuPhase data
-Wants=nuphase-copy.service 
+Wants=nuphase-copy.service nuphase-hk.service 
 Requires=nuphase-startup.service 
 
 [Service] 
