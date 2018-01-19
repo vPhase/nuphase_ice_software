@@ -76,6 +76,7 @@ int main (int nargs, char ** args)
 
   //make the output directory
   gzFile out = 0; 
+  char * out_name = 0;
 
   time_t start_t; 
   time(&start_t); 
@@ -84,8 +85,9 @@ int main (int nargs, char ** args)
   {
     char buf[1024]; 
     struct tm * tim = gmtime(&start_t); 
-    sprintf(buf,"%s/%04d_%02d_%02d_%02d%02d%02d.hk.gz", cfg.out_dir, 1900 + tim->tm_year, tim->tm_mon + 1, tim->tm_mday, tim->tm_hour, tim->tm_min, tim->tm_sec); 
+    sprintf(buf,"%s/%04d_%02d_%02d_%02d%02d%02d.hk.gz%s", cfg.out_dir, 1900 + tim->tm_year, tim->tm_mon + 1, tim->tm_mday, tim->tm_hour, tim->tm_min, tim->tm_sec,tmp_suffix); 
     out = gzopen(buf,"w"); 
+    out_name = strdup(buf); 
   }
 
 
@@ -213,7 +215,7 @@ int main (int nargs, char ** args)
   {
     nuphase_hk(&hk, cfg.asps_method); 
     nuphase_hk_gzwrite(out, &hk); 
-    gzclose(out); 
+    do_close(out, out_name); 
   }
 
 
