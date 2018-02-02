@@ -62,7 +62,8 @@ int do_close(gzFile gzf, char * path)
   if (!strcasecmp(path + pathlen-tmp_suffix_len ,tmp_suffix)) 
   {
     char * final_path = strdup(path);
-    final_path[pathlen+tmp_suffix_len] = 0; 
+    final_path[pathlen-tmp_suffix_len] = 0; 
+//    printf("Renaming %s to %s\n", path, final_path); 
     rename(path,final_path); 
     free(final_path); 
   }
