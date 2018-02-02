@@ -458,7 +458,7 @@ void * monitor_thread(void *v)
 }
 
 
-const char * subdirs[] = {"event","header","status"}; 
+const char * subdirs[] = {"event","header","status","aux","cfg"}; 
 const int nsubdirs = sizeof(subdirs) / sizeof(*subdirs); 
 
 //this makes the necessary directories for a time 
@@ -504,7 +504,7 @@ void copy_configs()
   for (prog = NUPHASE_STARTUP; prog <= NUPHASE_COPY; prog++)
   {
     nuphase_get_cfg_file(&cfgpath, prog); 
-    snprintf(bigbuf,sizeof(bigbuf), "cp --backup=simple %s %s", cfgpath, output_dir); 
+    snprintf(bigbuf,sizeof(bigbuf), "cp --backup=simple %s %s/cfg", cfgpath, output_dir); 
     system(bigbuf); 
   }
 
@@ -563,7 +563,7 @@ void * write_thread(void *v)
   thing_to_copy = strtok_r(tmp_str,":",&save_ptr); 
   while (thing_to_copy!=NULL)
   {
-     snprintf(bigbuf,sizeof(bigbuf), "cp -r %s %s", thing_to_copy, output_dir); 
+     snprintf(bigbuf,sizeof(bigbuf), "cp -r %s %s/aux", thing_to_copy, output_dir); 
      system(bigbuf); 
      thing_to_copy = strtok_r(NULL,":",&save_ptr);
   }
