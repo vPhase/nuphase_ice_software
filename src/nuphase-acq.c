@@ -597,7 +597,7 @@ void * write_thread(void *v)
       printf("---------after %u seconds-----------\n", (unsigned) (now - start_time)); 
       printf("  total events written: %d\n", ntotal_events); 
       printf("  write rate:  %g Hz\n", (num_events == 0) ? 0. :  ((float) num_events) / (now - last_print_out)); 
-      printf("  write buffer occupancy: %u \n", occupancy); 
+      printf("  write buffer occupancy: %zu \n", occupancy); 
       fs_avg_print(stdout); 
       nuphase_status_print(stdout, last_status); 
       pid_state_print(stdout, &last_pid); 
@@ -635,7 +635,7 @@ void * write_thread(void *v)
         if (!data_file || data_file_size >= config.events_per_file)
         {
           if (data_file) do_close(data_file, data_file_name); 
-          snprintf(bigbuf,sizeof(bigbuf),"%s/run%d/event/%llu.event.gz%s", config.output_directory,run_number,  events->events[j].event_number, tmp_suffix ); 
+          snprintf(bigbuf,sizeof(bigbuf),"%s/run%d/event/%zu.event.gz%s", config.output_directory,run_number,  events->events[j].event_number, tmp_suffix ); 
           data_file = gzopen(bigbuf,"w");  //TODO add error check
           data_file_name = strdup(bigbuf); 
           data_file_size = 0; 
@@ -644,7 +644,7 @@ void * write_thread(void *v)
         if (!header_file || header_file_size >= config.events_per_file)
         {
           if (header_file) do_close(header_file, header_file_name); 
-          snprintf(bigbuf,sizeof(bigbuf),"%s/run%d/header/%llu.header.gz%s", config.output_directory,run_number, events->headers[j].event_number, tmp_suffix ); 
+          snprintf(bigbuf,sizeof(bigbuf),"%s/run%d/header/%zu.header.gz%s", config.output_directory,run_number, events->headers[j].event_number, tmp_suffix ); 
           header_file = gzopen(bigbuf,"w");  //TODO add error check
           header_file_name = strdup(bigbuf); 
           header_file_size = 0; 
