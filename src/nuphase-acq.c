@@ -490,8 +490,24 @@ static int make_dirs_for_output(const char * prefix)
 }
 
 
+static char * output_dir = 0;
 
+void copy_configs() 
+{
 
+  char * cfgpath = 0; 
+  char bigbuf[1024];
+  if (!output_dir) return; 
+
+  nuphase_program_t prog;
+  for (prog = NUPHASE_STARTUP; prog <= NUPHASE_COPY; prog++)
+  {
+    nuphase_get_cfg_file(&cfgpath, prog); 
+    snprintf(bigbuf,sizeof(bigbuf), "cp --backup=simple %s %s", cfgpath, output_dir); 
+    system(bigbuf); 
+  }
+
+}
 
 /** Will write output to disk and some status info to screen */ 
 void * write_thread(void *v) 
@@ -531,6 +547,27 @@ void * write_thread(void *v)
   {
       fatal(); 
   }
+  output_dir = strdup(bigbuf); 
+
+  if (config.copy_configs) 
+  {
+    copy_configs(); 
+  }
+
+
+  //Copy any other things we want to the run directory 
+  char * thing_to_copy; 
+  char * tmp_str = strdup(config.copy_paths_to_rundir); 
+  char * save_ptr = 0;
+  thing_to_copy = strtok_r(tmp_str,":",&save_ptr); 
+  while (thing_to_copy!=NULL)
+  {
+     snprintf(bigbuf,sizeof(bigbuf), "cp -r %s %s", thing_to_copy, output_dir); 
+     system(bigbuf); 
+     thing_to_copy = strtok_r(NULL,":",&save_ptr);
+  }
+  free(tmp_str); 
+
  
   while(1) 
   {
@@ -697,6 +734,13 @@ static int configure_device()
   trigo.enable = config.enable_trigout; 
   trigo.width = config.trigout_width; 
   nuphase_configure_trigger_output(device,trigo); 
+
+  nuphase_ext_input_config_t trigi; 
+
+  nuphase_get_ext_trigger_in(device,&trigi); 
+  trigi.use_as_trigger = config.enable_extin; 
+  nuphase_configure_ext_trigger_in(device,trigi); 
+
 
   //set up the calpulser
   nuphase_calpulse(device,config.calpulser_state); 
@@ -958,7 +1002,15 @@ int read_config(int first_time)
     rename(tmp_run_file, config.run_file); 
   }
 
+
+  if (!first_time && config.copy_configs)
+  {
+    copy_configs(); 
+  }
+
+
   free(cfgpath); 
+  free(start_cfgpath); 
 
   return 0;
 }

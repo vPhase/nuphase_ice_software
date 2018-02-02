@@ -24,7 +24,7 @@ void nuphase_start_config_init(nuphase_start_cfg_t * c)
   c->heater_current = 500; 
   c->poll_interval = 5; 
   c->set_attenuation_cmd = "cd /home/nuphase/nuphase-python; python set_attenuation.py"; 
-  c->reconfigure_fpga_cmd = "cd /home/nuphase/nuphase-python; ./reconfigureFPGA -a 0; sleep 20; ./reconfigureFPGA -a 1; sleep 20;"; 
+  c->reconfigure_fpga_cmd = "cd /home/nuphase/nuphase-python; ./reconfigureFPGA -a 1; ./reconfigureFPGA -a 0; "; 
   c->desired_rms_master = 4.2; 
   c->desired_rms_slave = 7.0; 
   c->out_dir = "/data/startup/"; 
@@ -332,6 +332,7 @@ void nuphase_acq_config_init ( nuphase_acq_cfg_t * c)
 
   c->apply_attenuations = 0; 
   c->enable_trigout=1; 
+  c->enable_extin = 0; 
   c->trigout_width = 3; 
   c->disable_trigout_on_exit = 1; 
 
@@ -363,6 +364,9 @@ void nuphase_acq_config_init ( nuphase_acq_cfg_t * c)
   c->status_per_file = 200; 
   c->n_fast_scaler_avg = 20; 
   c->realtime_priority = 20; 
+
+  c->copy_paths_to_rundir = "/home/nuphase/nuphase-python/output:/proc/loadavg"; 
+  c->copy_configs = 1; 
 }
 
 int nuphase_acq_config_read(const char * fi, nuphase_acq_cfg_t * c) 
@@ -440,6 +444,7 @@ int nuphase_acq_config_read(const char * fi, nuphase_acq_cfg_t * c)
   config_lookup_int(&cfg,"device.pretrigger", &c->pretrigger); 
   config_lookup_int(&cfg,"device.calpulser_state", &c->calpulser_state); 
   config_lookup_int(&cfg,"device.enable_trigout", &c->enable_trigout); 
+  config_lookup_int(&cfg,"device.enable_extin", &c->enable_extin); 
   config_lookup_int(&cfg,"device.trigout_width", &c->trigout_width); 
   config_lookup_int(&cfg,"device.disable_trigout_on_exit", &c->disable_trigout_on_exit); 
   config_lookup_int(&cfg,"device.spi_clock", &c->spi_clock); 
@@ -483,11 +488,18 @@ int nuphase_acq_config_read(const char * fi, nuphase_acq_cfg_t * c)
     c->output_directory = strdup(output_directory); 
   }
 
+  const char * copy_paths; 
+  if (config_lookup_string( &cfg, "output.copy_paths_to_rundir", &copy_paths))
+  {
+    c->copy_paths_to_rundir = strdup(copy_paths); 
+  }
+
 
   config_lookup_int(&cfg,"output.print_interval", &c->print_interval); 
   config_lookup_int(&cfg,"output.run_length", &c->run_length); 
   config_lookup_int(&cfg,"output.events_per_file", &c->events_per_file); 
   config_lookup_int(&cfg,"output.status_per_file", &c->status_per_file); 
+  config_lookup_int(&cfg,"output.copy_configs", &c->copy_configs); 
 
 
 
@@ -588,6 +600,9 @@ int nuphase_acq_config_write(const char * fi, const nuphase_acq_cfg_t * c)
   fprintf(f,"  // Whether or not to enable the trigger output\n"); 
   fprintf(f,"  enable_trigout = %d;\n\n", c->enable_trigout); 
 
+  fprintf(f,"  // Whether or not to enable external trigger input\n"); 
+  fprintf(f,"  enable_extin = %d;\n\n", c->enable_extin); 
+
   fprintf(f,"  // The width of the trigger output in 40 ns intervals\n"); 
   fprintf(f,"  trigout_width = %d;\n\n", c->trigout_width); 
 
@@ -646,6 +661,12 @@ int nuphase_acq_config_write(const char * fi, const nuphase_acq_cfg_t * c)
 
   fprintf(f,"  //Interval between polling SPI link for data. 0 to just sched_yield\n"); 
   fprintf(f,"  poll_usecs = %u;\n\n", c->poll_usecs); 
+
+  fprintf(f,"  // Colon separated list of paths to copy (recursively) into run dir at start of run\n");
+  fprintf(f,"  copy_paths_to_rundir = \"%s\";\n\n", c->copy_paths_to_rundir); 
+
+  fprintf(f,"  //Whether or not to copy configs into run dir\n"); 
+  fprintf(f,"  copy_configs = %d;\n", c->copy_configs); 
 
   fprintf(f,"};\n\n"); 
 

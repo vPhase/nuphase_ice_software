@@ -90,6 +90,9 @@ typedef struct nuphase_acq_cfg
   // enable the trigout
   int enable_trigout;
 
+  // enable ext in 
+  int enable_extin; 
+
   // The width (in 40 ns increments) of the external trigger output
   int trigout_width; 
 
@@ -124,7 +127,12 @@ typedef struct nuphase_acq_cfg
 
   int realtime_priority; 
 
+  const char * copy_paths_to_rundir; 
+
+  int copy_configs; 
+
   uint16_t poll_usecs; 
+
 
 } nuphase_acq_cfg_t; 
 
