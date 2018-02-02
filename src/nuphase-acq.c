@@ -42,6 +42,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <signal.h>
+#include <inttypes.h> 
 
 
 /************** Structs /Typedefs ******************************/
@@ -635,7 +636,7 @@ void * write_thread(void *v)
         if (!data_file || data_file_size >= config.events_per_file)
         {
           if (data_file) do_close(data_file, data_file_name); 
-          snprintf(bigbuf,sizeof(bigbuf),"%s/run%d/event/%zu.event.gz%s", config.output_directory,run_number,  events->events[j].event_number, tmp_suffix ); 
+          snprintf(bigbuf,sizeof(bigbuf),"%s/run%d/event/%"PRIu64".event.gz%s", config.output_directory,run_number,  events->events[j].event_number, tmp_suffix ); 
           data_file = gzopen(bigbuf,"w");  //TODO add error check
           data_file_name = strdup(bigbuf); 
           data_file_size = 0; 
@@ -644,7 +645,7 @@ void * write_thread(void *v)
         if (!header_file || header_file_size >= config.events_per_file)
         {
           if (header_file) do_close(header_file, header_file_name); 
-          snprintf(bigbuf,sizeof(bigbuf),"%s/run%d/header/%zu.header.gz%s", config.output_directory,run_number, events->headers[j].event_number, tmp_suffix ); 
+          snprintf(bigbuf,sizeof(bigbuf),"%s/run%d/header/%"PRIu64".header.gz%s", config.output_directory,run_number, events->headers[j].event_number, tmp_suffix ); 
           header_file = gzopen(bigbuf,"w");  //TODO add error check
           header_file_name = strdup(bigbuf); 
           header_file_size = 0; 
