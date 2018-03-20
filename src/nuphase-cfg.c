@@ -367,6 +367,7 @@ void nuphase_acq_config_init ( nuphase_acq_cfg_t * c)
 
   c->copy_paths_to_rundir = "/home/nuphase/nuphase-python/output:/proc/loadavg"; 
   c->copy_configs = 1; 
+  memset(c->trig_delays,0,sizeof(c->trig_delays)); 
 }
 
 int nuphase_acq_config_read(const char * fi, nuphase_acq_cfg_t * c) 
@@ -501,6 +502,16 @@ int nuphase_acq_config_read(const char * fi, nuphase_acq_cfg_t * c)
   config_lookup_int(&cfg,"output.status_per_file", &c->status_per_file); 
   config_lookup_int(&cfg,"output.copy_configs", &c->copy_configs); 
 
+  for (i = 0; i < NP_NUM_CHAN; i++)
+  {
+    char buf[128]; 
+    sprintf(buf,"device.trig_delays.ch%d",i); 
+    if (config_lookup_int(&cfg,buf,&tmp))
+    {
+      c->trig_delays[i] = tmp; 
+    }
+  }
+
 
 
   return 0; 
@@ -631,6 +642,14 @@ int nuphase_acq_config_write(const char * fi, const nuphase_acq_cfg_t * c)
   fprintf(f,"  //command used to run the alignment program.\n"); 
   fprintf(f,"  alignment_command=\"%s\",\n\n", c->alignment_command); 
 
+  fprintf(f,"  //channel trig delays (right now can be 0-3)\n"); 
+  fprintf(f,"  trig_delays = {\n"); 
+  for (i = 0; i < NP_NUM_CHAN; i++)
+  {
+    fprintf(f, "     ch%d : %u;\n", i, c->trig_delays[i]); 
+  }
+  fprintf(f,"  };\n\n"); 
+ 
   fprintf(f,"};\n\n"); 
 
 

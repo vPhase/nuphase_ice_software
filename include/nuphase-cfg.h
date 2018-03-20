@@ -133,6 +133,8 @@ typedef struct nuphase_acq_cfg
 
   uint16_t poll_usecs; 
 
+  uint8_t trig_delays[NP_NUM_CHAN]; 
+
 
 } nuphase_acq_cfg_t; 
 
