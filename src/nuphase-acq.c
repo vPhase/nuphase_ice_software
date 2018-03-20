@@ -749,6 +749,8 @@ static int configure_device()
   //set up the pretrigger
   nuphase_set_pretrigger(device, (uint8_t) config.pretrigger & 0x7); 
 
+  //set up the trigger delays 
+  nuphase_set_trigger_delays(device, config.trig_delays); 
 
   if (config.apply_attenuations)
   {
