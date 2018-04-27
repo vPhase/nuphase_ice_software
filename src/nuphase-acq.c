@@ -417,7 +417,12 @@ void * monitor_thread(void *v)
         control.last_measured[ibeam] = measured; 
 
         // modify threshold 
-        mb.thresholds[ibeam] = st->trigger_thresholds[ibeam] +  control.k_p * e + control.k_i * ie * control.k_d * de; 
+        double dthreshold =   control.k_p * e + control.k_i * ie * control.k_d * de; 
+        
+        //cap the threshold increase at each step 
+        if (dthreshold > config.max_threshold_increase) dthreshold = config.max_threshold_increase; 
+
+        mb.thresholds[ibeam] = st->trigger_thresholds[ibeam] + dthreshold; 
 
 
 //        printf("BEAM %d\n", ibeam); 
