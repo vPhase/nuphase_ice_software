@@ -419,9 +419,8 @@ void * monitor_thread(void *v)
         // modify threshold 
         double dthreshold =   control.k_p * e + control.k_i * ie * control.k_d * de; 
         
-        //cap the threshold increase at 10 percent of the current threshold
-        //TODO: make configurable 
-        if (dthreshold > st->trigger_thresholds[ibeam] * 0.1) dthreshold = 0.1 * st->trigger_thresholds[ibeam]; 
+        //cap the threshold increase at each step 
+        if (dthreshold > config.max_threshold_increase) dthreshold = config.max_threshold_increase; 
 
         mb.thresholds[ibeam] = st->trigger_thresholds[ibeam] + dthreshold; 
 
