@@ -316,6 +316,7 @@ void nuphase_acq_config_init ( nuphase_acq_cfg_t * c)
   c->channel_mask = 0xff; 
   c->channel_read_mask[0] = 0xff;
   c->channel_read_mask[1] = 0xf;
+  c->min_threshold = 5000; 
 
   c->buffer_capacity = 100; 
   c->monitor_interval = 1.0; 
@@ -404,6 +405,8 @@ int nuphase_acq_config_read(const char * fi, nuphase_acq_cfg_t * c)
   config_lookup_float(&cfg,"control.k_d",&c->k_d); 
   config_lookup_int(&cfg,"control.max_threshold_increase",&tmp); 
   c->max_threshold_increase = tmp; 
+  config_lookup_int(&cfg,"control.min_threshold",&tmp); 
+  c->min_threshold = tmp; 
   config_lookup_float(&cfg,"control.monitor_interval",&c->monitor_interval); 
   config_lookup_float(&cfg,"control.sw_trigger_interval",&c->sw_trigger_interval); 
   config_lookup_int(&cfg,"control.enable_phased_trigger",&c->enable_phased_trigger); 
@@ -558,6 +561,9 @@ int nuphase_acq_config_write(const char * fi, const nuphase_acq_cfg_t * c)
 
   fprintf(f,"   // max threshold increase per step \n"); 
   fprintf(f,"   max_threshold_increase=%u;\n\n", c->max_threshold_increase); 
+
+  fprintf(f,"   // minimum threshold for any beam\n"); 
+  fprintf(f,"   min_threshold=%u;\n\n", c->min_threshold); 
 
   fprintf(f,"   //monitoring interval, for PID loop (in seconds)\n"); 
   fprintf(f,"   monitor_interval = %g;\n\n",c->monitor_interval); 

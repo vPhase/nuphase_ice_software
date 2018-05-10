@@ -767,6 +767,7 @@ static int configure_device()
 
   nuphase_set_poll_interval(device, config.poll_usecs); 
 
+  nuphase_set_min_threshold(device, config.min_threshold); 
 
  
   return 0; 
