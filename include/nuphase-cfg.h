@@ -138,6 +138,9 @@ typedef struct nuphase_acq_cfg
 
   uint8_t trig_delays[NP_NUM_CHAN]; 
 
+  /** minimum threshold */ 
+  uint32_t min_threshold; 
+
 
 } nuphase_acq_cfg_t; 
 
