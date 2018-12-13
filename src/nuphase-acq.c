@@ -117,7 +117,7 @@ static nuphase_acq_cfg_t config;
 static nuphase_start_cfg_t start_config; 
 
 /* Mutex protecting the configuration */
-static pthread_mutex_t config_lock; 
+static pthread_mutex_t config_lock = PTHREAD_MUTEX_INITIALIZER; 
 
 /* The device */
 static nuphase_dev_t* device;
@@ -764,6 +764,9 @@ static int configure_device()
 
   nuphase_set_trigger_mask(device, config.trigger_mask); 
   nuphase_set_channel_mask(device, config.channel_mask); 
+
+  nuphase_set_channel_read_mask(device, MASTER, config.channel_read_mask[0]);
+  nuphase_set_channel_read_mask(device, SLAVE, config.channel_read_mask[1]);
 
   nuphase_set_poll_interval(device, config.poll_usecs); 
 
