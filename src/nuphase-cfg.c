@@ -415,8 +415,8 @@ int nuphase_acq_config_read(const char * fi, nuphase_acq_cfg_t * c)
   config_lookup_float(&cfg,"control.slow_scaler_weight",&c->slow_scaler_weight); 
   config_lookup_int(&cfg,"control.n_fast_scaler_avg",&c->n_fast_scaler_avg); 
   config_lookup_int(&cfg,"control.subtract_gated",&c->subtract_gated); 
-  config_lookup_int(&cfg,"realtime_priority",&c->realtime_priority); 
-  config_lookup_int(&cfg,"poll_usecs",&tmp); 
+  config_lookup_int(&cfg,"control.realtime_priority",&c->realtime_priority); 
+  config_lookup_int(&cfg,"control.poll_usecs",&tmp); 
   c->poll_usecs = tmp; 
 
 
