@@ -363,12 +363,24 @@ void nuphase_acq_config_init ( nuphase_acq_cfg_t * c)
   c->secs_before_phased_trigger = 20; 
   c->events_per_file = 1000; 
   c->status_per_file = 200; 
+  c->surface_events_per_file = 100; 
   c->n_fast_scaler_avg = 20; 
   c->realtime_priority = 20; 
 
   c->copy_paths_to_rundir = "/home/nuphase/nuphase-python/output:/proc/loadavg"; 
   c->copy_configs = 1; 
   memset(c->trig_delays,0,sizeof(c->trig_delays)); 
+
+  c->surface_readout = 1; 
+  c->surface_pretrigger = 4; 
+  c->surface_num_coincidences = 3; 
+  c->surface_antenna_mask = 0x38; 
+  c->surface_vpp_threshold = 20; 
+  c->surface_coincidence_window = 9; 
+  c->surface_waveform_length = 512; 
+  c->surface_shutdown = 0; 
+  c->surface_read_mask = 0xfc; 
+
 }
 
 int nuphase_acq_config_read(const char * fi, nuphase_acq_cfg_t * c) 
@@ -419,6 +431,10 @@ int nuphase_acq_config_read(const char * fi, nuphase_acq_cfg_t * c)
   config_lookup_int(&cfg,"control.poll_usecs",&tmp); 
   c->poll_usecs = tmp; 
 
+  config_lookup_int(&cfg,"control.surface_num_coincidences", &c->surface_num_coincidences);
+  config_lookup_int(&cfg,"control.surface_antenna_mask", &c->surface_antenna_mask);
+  config_lookup_int(&cfg,"control.surface_vpp_threshold", &c->surface_vpp_threshold);
+  config_lookup_int(&cfg,"control.surface_coincidence_window", &c->surface_coincidence_window);
 
 
   const char * status_save = 0; 
@@ -447,7 +463,9 @@ int nuphase_acq_config_read(const char * fi, nuphase_acq_cfg_t * c)
 
   config_lookup_int(&cfg,"device.buffer_capacity", &c->buffer_capacity); 
   config_lookup_int(&cfg,"device.waveform_length", &c->waveform_length); 
+  config_lookup_int(&cfg,"device.surface_waveform_length", &c->surface_waveform_length); 
   config_lookup_int(&cfg,"device.pretrigger", &c->pretrigger); 
+  config_lookup_int(&cfg,"device.surface_pretrigger", &c->surface_pretrigger); 
   config_lookup_int(&cfg,"device.calpulser_state", &c->calpulser_state); 
   config_lookup_int(&cfg,"device.enable_trigout", &c->enable_trigout); 
   config_lookup_int(&cfg,"device.enable_extin", &c->enable_extin); 
@@ -455,6 +473,8 @@ int nuphase_acq_config_read(const char * fi, nuphase_acq_cfg_t * c)
   config_lookup_int(&cfg,"device.disable_trigout_on_exit", &c->disable_trigout_on_exit); 
   config_lookup_int(&cfg,"device.spi_clock", &c->spi_clock); 
   config_lookup_int(&cfg,"device.apply_attenuations", &c->apply_attenuations); 
+  config_lookup_int(&cfg,"device.surface_shutdown", &c->surface_shutdown); 
+  config_lookup_int(&cfg,"device.surface_readout", &c->surface_readout); 
 
   int b;
   for (b = 0; b < NP_MAX_BOARDS; b++)
@@ -475,6 +495,8 @@ int nuphase_acq_config_read(const char * fi, nuphase_acq_cfg_t * c)
     c->channel_read_mask[0] = tmp; 
   if (config_lookup_int(&cfg, "device.channel_read_mask.[1]", &tmp))
     c->channel_read_mask[1] = tmp; 
+
+  config_lookup_int(&cfg,"device.surface_read_mask",&c->surface_read_mask); 
 
   const char * cmd; 
   if (config_lookup_string(&cfg, "device.alignment_command", &cmd) )
@@ -504,6 +526,7 @@ int nuphase_acq_config_read(const char * fi, nuphase_acq_cfg_t * c)
   config_lookup_int(&cfg,"output.print_interval", &c->print_interval); 
   config_lookup_int(&cfg,"output.run_length", &c->run_length); 
   config_lookup_int(&cfg,"output.events_per_file", &c->events_per_file); 
+  config_lookup_int(&cfg,"output.surface_events_per_file", &c->surface_events_per_file); 
   config_lookup_int(&cfg,"output.status_per_file", &c->status_per_file); 
   config_lookup_int(&cfg,"output.copy_configs", &c->copy_configs); 
 
@@ -596,6 +619,19 @@ int nuphase_acq_config_write(const char * fi, const nuphase_acq_cfg_t * c)
   fprintf(f,"   // load thresholds from status file on start.\n");  
   fprintf(f,"   load_thresholds_from_status_file=%d\n\n", c->load_thresholds_from_status_file); 
 
+   fprintf(f,"   // Number of coincidences necessary for surface channels\n");
+   fprintf(f,"   surface_num_coincidences = %d; \n\n", c->surface_num_coincidences); 
+
+   fprintf(f,"   // Surface antenna mask\n");
+   fprintf(f,"   surface_antenna_mask = 0x%x;\n\n",c->surface_antenna_mask);
+
+   fprintf(f,"   // Surface vpp threshold\n");
+   fprintf(f,"   surface_vpp_threshold = %d;\n\n", c->surface_vpp_threshold); 
+
+   fprintf(f,"   // Surface coincidence window (in units of 10.7ns)\n");
+   fprintf(f,"   surface_coincidence_window = %d;\n\n",c->surface_coincidence_window); 
+
+
 
   fprintf(f,"};\n\n"); 
 
@@ -613,8 +649,15 @@ int nuphase_acq_config_write(const char * fi, const nuphase_acq_cfg_t * c)
   fprintf(f,"  //the length of a waveform, in samples. \n"); 
   fprintf(f,"  waveform_length = %d;\n\n", c->waveform_length); 
 
+  fprintf(f,"  //the length of a surface aveform, in samples. \n"); 
+  fprintf(f,"  surface_waveform_length = %d;\n\n", c->surface_waveform_length); 
+
+
   fprintf(f,"  //the pretrigger window length, in hardware units\n"); 
   fprintf(f,"  pretrigger = %d;\n\n", c->pretrigger); 
+
+  fprintf(f,"  //the surface pretrigger window length, in hardware units\n"); 
+  fprintf(f,"  surface_pretrigger = %d;\n\n", c->surface_pretrigger); 
 
   fprintf(f,"  //calpulser state, 0 (off) , 2 (baseline)  or 3 (calpulser)\n"); 
   fprintf(f,"  calpulser_state = %d;\n\n", c->calpulser_state); 
@@ -650,6 +693,9 @@ int nuphase_acq_config_write(const char * fi, const nuphase_acq_cfg_t * c)
   fprintf(f,"  //which channels to digitize\n"); 
   fprintf(f,"  channel_read_mask = (0x%x, 0x%x); \n\n", c->channel_read_mask[0], c->channel_read_mask[1]); 
 
+  fprintf(f,"  //The channels readout (on the SLAVE board) when the reading out\n"); 
+  fprintf(f,"  surface_channel_read_mask = 0x%x;\n\n", c->surface_read_mask); 
+
   fprintf(f,"  //command used to run the alignment program.\n"); 
   fprintf(f,"  alignment_command=\"%s\",\n\n", c->alignment_command); 
 
@@ -660,6 +706,12 @@ int nuphase_acq_config_write(const char * fi, const nuphase_acq_cfg_t * c)
     fprintf(f, "     ch%d : %u;\n", i, c->trig_delays[i]); 
   }
   fprintf(f,"  };\n\n"); 
+
+  fprintf(f,"  //Enable surface readout\n"); 
+  fprintf(f,"  surface_readout = %d;\n\n", c->surface_readout); 
+
+  fprintf(f,"  // Shutdown the surface channels\n"); 
+  fprintf(f,"  surface_shutdown = %d;\n\n", c->surface_shutdown); 
  
   fprintf(f,"};\n\n"); 
 
@@ -682,6 +734,10 @@ int nuphase_acq_config_write(const char * fi, const nuphase_acq_cfg_t * c)
 
   fprintf(f,"  //events per output file\n");
   fprintf(f,"  events_per_file = %d;\n\n", c->events_per_file); 
+
+  fprintf(f,"  //surface events per surface output file\n");
+  fprintf(f,"  surface_events_per_file = %d;\n\n", c->surface_events_per_file); 
+
 
   fprintf(f,"  //statuses per output file\n"); 
   fprintf(f,"  status_per_file = %d;\n\n", c->status_per_file); 

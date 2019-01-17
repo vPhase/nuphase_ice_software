@@ -142,6 +142,19 @@ typedef struct nuphase_acq_cfg
   uint32_t min_threshold; 
 
 
+  //surface stuff
+  int surface_pretrigger; 
+  int surface_num_coincidences;
+  int surface_antenna_mask;
+  int surface_vpp_threshold; 
+  int surface_coincidence_window; 
+  int surface_waveform_length;
+  int surface_shutdown; 
+  int surface_read_mask; 
+  int surface_readout; 
+  int surface_events_per_file; 
+
+
 } nuphase_acq_cfg_t; 
 
 

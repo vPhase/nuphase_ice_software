@@ -94,9 +94,12 @@ static void pid_state_print(FILE * f, const pid_state_t * pid)
  **/ 
 typedef struct acq_buffer
 {
-  int nfilled; 
   nuphase_event_t events[NP_NUM_BUFFER]; 
+  nuphase_event_t surface_event;
   nuphase_header_t headers[NP_NUM_BUFFER]; 
+  nuphase_header_t surface_header; 
+  int nfilled; 
+  int surface_filled; 
 } acq_buffer_t;
 
 
@@ -228,7 +231,9 @@ void * acq_thread(void *v)
 
     while (!mem->nfilled && !die) 
     {
-      mem->nfilled = nuphase_wait_for_and_read_multiple_events(device, &mem->headers, &mem->events); 
+      mem->nfilled = nuphase_wait_for_and_read_multiple_events(device, &mem->headers, &mem->events, 
+                                                               &mem->surface_header, &mem->surface_event,
+                                                               &mem->surface_filled);
     }
     nuphase_buf_commit(acq_buffer); // we filled it 
   }
@@ -378,7 +383,7 @@ void * monitor_thread(void *v)
       monitor_buffer_t mb; 
       nuphase_status_t *st = &mb.status;
 
-      nuphase_read_status(device, st, MASTER); 
+      nuphase_read_status(device, st, config.surface_readout); 
  //     nuphase_status_print(stdout,st); 
 
       int ibeam; 
@@ -525,14 +530,20 @@ void * write_thread(void *v)
 
   int    data_file_size = 0;
   int    header_file_size = 0;
+  int    surface_header_file_size = 0;
+  int    surface_file_size = 0;
   int    status_file_size =0;
 
   gzFile data_file = 0 ; 
   gzFile header_file = 0 ; 
+  gzFile surface_header_file = 0 ; 
   gzFile status_file  = 0 ; 
+  gzFile surface_file  = 0 ; 
   char * data_file_name = 0; 
   char * header_file_name = 0; 
+  char * surface_header_file_name = 0; 
   char * status_file_name = 0; 
+  char * surface_file_name = 0; 
 
   acq_buffer_t *events= 0; 
   monitor_buffer_t *mon= 0;
@@ -542,10 +553,11 @@ void * write_thread(void *v)
   pid_state_t last_pid; 
   pid_state_init(&last_pid,-1,-1,-1); 
 
-  nuphase_read_status(device, last_status,MASTER); 
+  nuphase_read_status(device, last_status,config.surface_readout); 
 
   
   int num_events = 0; 
+  int ntotal_surface_events = 0; 
   int ntotal_events = 0;
 
   snprintf(bigbuf, sizeof(bigbuf),"%s/run%d/", config.output_directory, run_number); 
@@ -586,8 +598,10 @@ void * write_thread(void *v)
     if (nuphase_buf_occupancy(acq_buffer))
     {
         events = nuphase_buf_pop(acq_buffer, events); 
-        num_events += events->nfilled; 
-        ntotal_events += events->nfilled;
+        int num_surface= events->surface_filled > 0 ? 1 : 0; 
+        num_events += events->nfilled + num_surface; 
+        ntotal_events += events->nfilled + num_surface;
+        ntotal_surface_events += num_surface; 
         have_data=1;
     }
 
@@ -601,7 +615,7 @@ void * write_thread(void *v)
     if (config.print_interval > 0 && now - last_print_out > config.print_interval)  
     {
       printf("---------after %u seconds-----------\n", (unsigned) (now - start_time)); 
-      printf("  total events written: %d\n", ntotal_events); 
+      printf("  total events written (including %d surface): %d\n", ntotal_events, ntotal_surface_events); 
       printf("  write rate:  %g Hz\n", (num_events == 0) ? 0. :  ((float) num_events) / (now - last_print_out)); 
       printf("  write buffer occupancy: %zu \n", occupancy); 
       fs_avg_print(stdout); 
@@ -618,7 +632,9 @@ void * write_thread(void *v)
       {
         if (data_file)  do_close(data_file,data_file_name); 
         if (header_file)  do_close(header_file, header_file_name); 
+        if (surface_header_file)  do_close(surface_header_file, surface_header_file_name); 
         if (status_file)  do_close(status_file, status_file_name); 
+        if (surface_file)  do_close(surface_file, surface_file_name); 
 
         break; 
       }
@@ -660,7 +676,37 @@ void * write_thread(void *v)
         nuphase_header_gzwrite(header_file, &events->headers[j]); 
         data_file_size++; 
         header_file_size++; 
+
       }
+      int nsurface = events->surface_filled > 0 ? 1 : 0; 
+
+      if (nsurface) 
+      {
+        if (!surface_file || surface_file_size >= config.surface_events_per_file) 
+        {
+          if (surface_file) do_close(surface_file, surface_file_name); 
+          snprintf(bigbuf,sizeof(bigbuf),"%s/run%d/event/%"PRIu64".surface_event.gz%s", config.output_directory,run_number,  events->surface_event.event_number, tmp_suffix ); 
+          surface_file = gzopen(bigbuf,"w");  //TODO add error check
+          surface_file_name = strdup(bigbuf); 
+          surface_file_size = 0; 
+
+        }
+
+        if (!surface_header_file || surface_header_file_size >= config.surface_events_per_file) 
+        {
+          if (surface_header_file) do_close(surface_header_file, surface_header_file_name); 
+          snprintf(bigbuf,sizeof(bigbuf),"%s/run%d/header/%"PRIu64".surface_header.gz%s", config.output_directory,run_number,  events->surface_header.event_number, tmp_suffix ); 
+          surface_header_file = gzopen(bigbuf,"w");  //TODO add error check
+          surface_header_file_name = strdup(bigbuf); 
+          surface_header_file_size = 0; 
+        }
+
+        nuphase_event_gzwrite(surface_file, &events->surface_event); 
+        nuphase_header_gzwrite(surface_header_file, &events->surface_header); 
+        surface_file_size++; 
+        surface_header_file_size++; 
+      }
+
     }
 
     if (have_status)
@@ -733,6 +779,7 @@ static int configure_device()
 {
   nuphase_set_spi_clock(device, config.spi_clock); 
   nuphase_set_buffer_length(device, config.waveform_length); 
+  nuphase_set_surface_buffer_length(device, config.surface_waveform_length); 
 
   //setup the external trigger
   nuphase_trigger_output_config_t trigo; 
@@ -752,7 +799,7 @@ static int configure_device()
   nuphase_calpulse(device,config.calpulser_state); 
 
   //set up the pretrigger
-  nuphase_set_pretrigger(device, (uint8_t) config.pretrigger & 0x7); 
+  nuphase_set_pretrigger(device, (uint8_t) config.pretrigger & 0x7, (uint8_t) config.surface_pretrigger & 0x7); 
 
   //set up the trigger delays 
   nuphase_set_trigger_delays(device, config.trig_delays); 
@@ -771,6 +818,17 @@ static int configure_device()
   nuphase_set_poll_interval(device, config.poll_usecs); 
 
   nuphase_set_min_threshold(device, config.min_threshold); 
+
+  nuphase_enable_surface_readout(device, config.surface_readout); 
+  nuphase_set_surface_channel_read_mask(device, config.surface_read_mask); 
+
+  struct nuphase_surface_setup s;
+  s.vpp_threshold = config.surface_vpp_threshold; 
+  s.coincident_window_length = config.surface_coincidence_window;
+  s.antenna_mask = config.surface_antenna_mask; 
+  s.n_coincident_channels = config.surface_num_coincidences;
+
+  nuphase_configure_surface(device,&s); 
 
  
   return 0; 
@@ -897,6 +955,7 @@ static int setup()
   //Set event number offset
   nuphase_set_readout_number_offset(device, run64 * 1000000000); 
 
+  if (config.surface_shutdown) nuphase_surface_powerdown(device); 
   configure_device(); 
 
   //set up the beamforming trigger 
