@@ -615,7 +615,7 @@ void * write_thread(void *v)
     if (config.print_interval > 0 && now - last_print_out > config.print_interval)  
     {
       printf("---------after %u seconds-----------\n", (unsigned) (now - start_time)); 
-      printf("  total events written (including %d surface): %d\n", ntotal_events, ntotal_surface_events); 
+      printf("  total events written: %d (including %d surface)\n", ntotal_events, ntotal_surface_events); 
       printf("  write rate:  %g Hz\n", (num_events == 0) ? 0. :  ((float) num_events) / (now - last_print_out)); 
       printf("  write buffer occupancy: %zu \n", occupancy); 
       fs_avg_print(stdout); 
