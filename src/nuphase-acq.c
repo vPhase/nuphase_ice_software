@@ -383,7 +383,7 @@ void * monitor_thread(void *v)
       monitor_buffer_t mb; 
       nuphase_status_t *st = &mb.status;
 
-      nuphase_read_status(device, st, config.surface_readout); 
+      nuphase_read_status(device, st, 1); 
  //     nuphase_status_print(stdout,st); 
 
       int ibeam; 
