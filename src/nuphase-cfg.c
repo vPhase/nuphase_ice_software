@@ -372,6 +372,7 @@ void nuphase_acq_config_init ( nuphase_acq_cfg_t * c)
   memset(c->trig_delays,0,sizeof(c->trig_delays)); 
 
   c->surface_readout = 1; 
+  c->surface_throttle = 3; 
   c->surface_pretrigger = 4; 
   c->surface_num_coincidences = 3; 
   c->surface_antenna_mask = 0x38; 
@@ -475,6 +476,7 @@ int nuphase_acq_config_read(const char * fi, nuphase_acq_cfg_t * c)
   config_lookup_int(&cfg,"device.apply_attenuations", &c->apply_attenuations); 
   config_lookup_int(&cfg,"device.surface_shutdown", &c->surface_shutdown); 
   config_lookup_int(&cfg,"device.surface_readout", &c->surface_readout); 
+  config_lookup_int(&cfg,"device.surface_throttle", &c->surface_throttle); 
 
   int b;
   for (b = 0; b < NP_MAX_BOARDS; b++)
@@ -709,6 +711,9 @@ int nuphase_acq_config_write(const char * fi, const nuphase_acq_cfg_t * c)
 
   fprintf(f,"  //Enable surface readout\n"); 
   fprintf(f,"  surface_readout = %d;\n\n", c->surface_readout); 
+
+  fprintf(f,"  //Surface throttle per second (0 for none)\n"); 
+  fprintf(f,"  surface_throttle = %d;\n\n", c->surface_throttle); 
 
   fprintf(f,"  // Shutdown the surface channels\n"); 
   fprintf(f,"  surface_shutdown = %d;\n\n", c->surface_shutdown); 

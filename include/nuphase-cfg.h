@@ -153,6 +153,7 @@ typedef struct nuphase_acq_cfg
   int surface_read_mask; 
   int surface_readout; 
   int surface_events_per_file; 
+  int surface_throttle; 
 
 
 } nuphase_acq_cfg_t; 

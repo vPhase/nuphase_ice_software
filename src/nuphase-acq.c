@@ -553,7 +553,7 @@ void * write_thread(void *v)
   pid_state_t last_pid; 
   pid_state_init(&last_pid,-1,-1,-1); 
 
-  nuphase_read_status(device, last_status,config.surface_readout); 
+  nuphase_read_status(device, last_status,1); 
 
   
   int num_events = 0; 
@@ -618,6 +618,11 @@ void * write_thread(void *v)
       printf("  total events written: %d (including %d surface)\n", ntotal_events, ntotal_surface_events); 
       printf("  write rate:  %g Hz\n", (num_events == 0) ? 0. :  ((float) num_events) / (now - last_print_out)); 
       printf("  write buffer occupancy: %zu \n", occupancy); 
+      if (config.surface_throttle > 0) 
+      {
+        printf("  Skipped %d surface events in the last second\n", nuphase_get_surface_skipped_in_last_second(device, 0)); 
+      }
+
       fs_avg_print(stdout); 
       nuphase_status_print(stdout, last_status); 
       pid_state_print(stdout, &last_pid); 
@@ -820,6 +825,7 @@ static int configure_device()
   nuphase_set_min_threshold(device, config.min_threshold); 
 
   nuphase_enable_surface_readout(device, config.surface_readout); 
+  nuphase_surface_set_throttle(device,config.surface_throttle); 
   nuphase_set_surface_channel_read_mask(device, config.surface_read_mask); 
 
   struct nuphase_surface_setup s;
