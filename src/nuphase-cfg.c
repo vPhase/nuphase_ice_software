@@ -373,6 +373,7 @@ void nuphase_acq_config_init ( nuphase_acq_cfg_t * c)
 
   c->surface_readout = 1; 
   c->surface_throttle = 3; 
+  c->surface_clear_buffer_when_throttled = 0; 
   c->surface_pretrigger = 4; 
   c->surface_num_coincidences = 3; 
   c->surface_antenna_mask = 0x38; 
@@ -381,7 +382,9 @@ void nuphase_acq_config_init ( nuphase_acq_cfg_t * c)
   c->surface_waveform_length = 512; 
   c->surface_shutdown = 0; 
   c->surface_read_mask = 0xfc; 
-
+  c->surface_highpass = 1; 
+  c->surface_require_h_bigger_than_v= 1; 
+  c->surface_hpol_threshold = 0x0fffff; 
 }
 
 int nuphase_acq_config_read(const char * fi, nuphase_acq_cfg_t * c) 
@@ -436,6 +439,10 @@ int nuphase_acq_config_read(const char * fi, nuphase_acq_cfg_t * c)
   config_lookup_int(&cfg,"control.surface_antenna_mask", &c->surface_antenna_mask);
   config_lookup_int(&cfg,"control.surface_vpp_threshold", &c->surface_vpp_threshold);
   config_lookup_int(&cfg,"control.surface_coincidence_window", &c->surface_coincidence_window);
+  config_lookup_int(&cfg,"control.surface_highpass", &c->surface_highpass);
+  config_lookup_int(&cfg,"control.surface_require_h_bigger_than_v", &c->surface_require_h_bigger_than_v);
+  config_lookup_int(&cfg,"control.surface_hpol_threshold", &c->surface_hpol_threshold);
+
 
 
   const char * status_save = 0; 
@@ -477,6 +484,7 @@ int nuphase_acq_config_read(const char * fi, nuphase_acq_cfg_t * c)
   config_lookup_int(&cfg,"device.surface_shutdown", &c->surface_shutdown); 
   config_lookup_int(&cfg,"device.surface_readout", &c->surface_readout); 
   config_lookup_int(&cfg,"device.surface_throttle", &c->surface_throttle); 
+  config_lookup_int(&cfg,"device.surface_clear_buffer_when_throttled", &c->surface_clear_buffer_when_throttled); 
 
   int b;
   for (b = 0; b < NP_MAX_BOARDS; b++)
@@ -633,6 +641,15 @@ int nuphase_acq_config_write(const char * fi, const nuphase_acq_cfg_t * c)
    fprintf(f,"   // Surface coincidence window (in units of 10.7ns)\n");
    fprintf(f,"   surface_coincidence_window = %d;\n\n",c->surface_coincidence_window); 
 
+   fprintf(f,"   //Require H>V on surface\n");
+   fprintf(f,"   surface_require_h_bigger_than_v = %d;\n\n", c->surface_require_h_bigger_than_v);
+
+   fprintf(f,"   //Surface HPol threshold\n");
+   fprintf(f,"   surface_hpol_threshold = 0x%x;\n\n", c->surface_hpol_threshold);
+
+   fprintf(f,"   //Enable Surface Highpass FIR \n");
+   fprintf(f,"   surface_highpass = %d;\n\n", c->surface_highpass);
+
 
 
   fprintf(f,"};\n\n"); 
@@ -714,6 +731,10 @@ int nuphase_acq_config_write(const char * fi, const nuphase_acq_cfg_t * c)
 
   fprintf(f,"  //Surface throttle per second (0 for none)\n"); 
   fprintf(f,"  surface_throttle = %d;\n\n", c->surface_throttle); 
+
+  fprintf(f,"  //Clear buffers when surface is throttled\n"); 
+  fprintf(f,"  surface_clear_buffer_when_throttled = %d;\n\n", c->surface_clear_buffer_when_throttled); 
+
 
   fprintf(f,"  // Shutdown the surface channels\n"); 
   fprintf(f,"  surface_shutdown = %d;\n\n", c->surface_shutdown); 

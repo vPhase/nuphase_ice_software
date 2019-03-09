@@ -825,7 +825,7 @@ static int configure_device()
   nuphase_set_min_threshold(device, config.min_threshold); 
 
   nuphase_enable_surface_readout(device, config.surface_readout); 
-  nuphase_surface_set_throttle(device,config.surface_throttle); 
+  nuphase_surface_set_throttle(device,config.surface_throttle, config.surface_clear_buffer_when_throttled); 
   nuphase_set_surface_channel_read_mask(device, config.surface_read_mask); 
 
   struct nuphase_surface_setup s;
@@ -833,6 +833,9 @@ static int configure_device()
   s.coincident_window_length = config.surface_coincidence_window;
   s.antenna_mask = config.surface_antenna_mask; 
   s.n_coincident_channels = config.surface_num_coincidences;
+  s.min_hpol_threshold = config.surface_hpol_threshold; 
+  s.require_h_greater_than_v = config.surface_require_h_bigger_than_v; 
+  s.highpass_filter = config.surface_highpass; 
 
   nuphase_configure_surface(device,&s); 
 
