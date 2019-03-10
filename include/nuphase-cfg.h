@@ -154,6 +154,10 @@ typedef struct nuphase_acq_cfg
   int surface_readout; 
   int surface_events_per_file; 
   int surface_throttle; 
+  int surface_clear_buffer_when_throttled; 
+  int surface_highpass; 
+  int surface_require_h_bigger_than_v; 
+  int surface_hpol_threshold; 
 
 
 } nuphase_acq_cfg_t; 
